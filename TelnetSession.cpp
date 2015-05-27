@@ -1,6 +1,6 @@
 #include "TelnetSession.hpp"
-#include <boost/bind.hpp>
 #include <utility>
+#include <functional>
 #include <iostream>
 
 using namespace boost::asio;
@@ -16,9 +16,9 @@ TelnetSession::TelnetSession(tcp::socket&& socket):
 void TelnetSession::read_()
 {
     socket_.async_read_some(buffer(data_, 256),
-            boost::bind(&TelnetSession::onRead_, this,
-                        placeholders::error,
-                        placeholders::bytes_transferred));
+            std::bind(&TelnetSession::onRead_, this,
+                      std::placeholders::_1,
+                      std::placeholders::_2));
 }
 
 void TelnetSession::onRead_(const error_code& error, size_t len)
@@ -30,8 +30,8 @@ void TelnetSession::onRead_(const error_code& error, size_t len)
     }
 
     async_write(socket_, buffer(data_, len),
-                boost::bind(&TelnetSession::onWrite_, this,
-                            placeholders::error));
+                std::bind(&TelnetSession::onWrite_, this,
+                          std::placeholders::_1));
 }
 
 void TelnetSession::onWrite_(const error_code& error)

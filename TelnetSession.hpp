@@ -1,3 +1,6 @@
+#ifndef TELNET_SESSION_HPP
+#define TELNET_SESSION_HPP
+
 #include <boost/asio.hpp>
 
 class TelnetSession
@@ -15,3 +18,5 @@ class TelnetSession
     boost::asio::ip::tcp::socket socket_;
     char data_[256];
 };
+
+#endif
