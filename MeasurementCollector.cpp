@@ -1,6 +1,6 @@
 #include "MeasurementCollector.hpp"
 
-Measurements* MeasurementCollector::collect(const std::string& address)
+Measurements& MeasurementCollector::collect(const std::string& address)
 {
     auto it = measurements_.find(address);
     if(it == measurements_.end())
@@ -11,10 +11,10 @@ Measurements* MeasurementCollector::collect(const std::string& address)
     }
     Measurements* m = it->second.get();
 
-    return m;
+    return *m;
 }
 
-std::vector<Measurements::Data> MeasurementCollector::getData()
+std::vector<Measurements::Data> MeasurementCollector::getData() const
 {
     std::vector<Measurements::Data> ms;
     for(const auto& p : measurements_)

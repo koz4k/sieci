@@ -11,18 +11,21 @@ int main(int argc, char** argv)
     {
         MeasurementCollector mc;
 
-        Measurements* ms = mc.collect("127.0.0.1");
-        ms->addUdp(123);
-        ms->addUdp(0);
-        ms->addTcp(123);
-        ms->addIcmp(123);
-        ms->addTcp(12);
+        Measurements& m1 = mc.collect("127.0.0.1");
+        m1.addUdp(123);
+        m1.addUdp(0);
+        m1.addTcp(123);
+        m1.addIcmp(123);
+        m1.addTcp(12);
 
-        ms = mc.collect("kurzastopa.pl");
-        ms->addUdp(321);
-        ms->addIcmp(23);
+        Measurements& m2 = mc.collect("kurzastopa.pl");
+        m2.addUdp(321);
+        m2.addIcmp(23);
 
-        ms = mc.collect("hubbabubbabubbabubba");
+        mc.collect("hubbabubbabubbabubba");
+
+        for(char c = 'a'; c <= 'z'; ++c)
+            mc.collect(std::string(16, c)).addTcp('z' - c + 1);
 
         io_service io;
         TelnetServer server(mc, io, 2015);

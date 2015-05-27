@@ -4,23 +4,33 @@
 #include <sstream>
 #include <cmath>
 
-Measurements::Data Measurements::getData()
+Measurements::Data Measurements::getData() const
 {
     Data data;
     data.address = address_;
 
-    std::stringstream ss;
-    Measurements::outputMeasurement_(ss,
-            Measurements::getMean_(udp_, sumUdp_));
-    ss << " ";
-    Measurements::outputMeasurement_(ss,
-            Measurements::getMean_(tcp_, sumTcp_));
-    ss << " ";
-    Measurements::outputMeasurement_(ss,
-            Measurements::getMean_(icmp_, sumIcmp_));
-    data.render = ss.str();
+    std::array<double, 3> means{getMean_(udp_, sumUdp_),
+            getMean_(tcp_, sumTcp_), getMean_(icmp_, sumIcmp_)};
 
-    data.mean = getMean_();
+    std::stringstream ss;
+    double sum = 0;
+    int c = 0;
+    for(double m : means)
+    {
+        Measurements::outputMeasurement_(ss, m);
+        ss << " ";
+
+        if(!isnan(m))
+        {
+            sum += m;
+            ++c;
+        }
+    }
+
+    data.render = ss.str();
+    data.render = data.render.substr(0, data.render.size() - 1);
+
+    data.mean = c ? sum / c : 0;
 
     return data;
 }
@@ -42,32 +52,10 @@ double Measurements::getMean_(const std::deque<int>& dq, int sum)
     return dq.empty() ? NAN : ((double) sum) / dq.size();
 }
 
-double Measurements::getMean_()
-{
-    std::array<double, 3> means{getMean_(udp_, sumUdp_),
-            getMean_(tcp_, sumTcp_), getMean_(icmp_, sumIcmp_)};
-
-    double sum = 0;
-    int c = 0;
-    for(double m : means)
-    {
-        if(!isnan(m))
-        {
-            sum += m;
-            ++c;
-        }
-    }
-    return c ? sum / c : 0;
-}
-
 void Measurements::outputMeasurement_(std::ostream& os, double measurement)
 {
     if(!isnan(measurement))
         os << (int) measurement;
     else
         os << "n/a";
-}
-
-std::ostream& operator<<(std::ostream& os, Measurements& ms)
-{
 }

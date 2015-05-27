@@ -22,15 +22,24 @@ TelnetServer::TelnetServer(MeasurementCollector& mc, io_service& io,
     updateScreen_();
 }
 
-std::string TelnetServer::getScreen(size_t startLine)
+std::string TelnetServer::getScreen(int startLine) const
 {
     std::stringstream ss;
-    for(int line = startLine;
-            line < std::min(startLine + SCREEN_HEIGHT, screen_.size());
-            ++line)
-        ss << screen_[line] << "\r\n";
+    ss << "\u001B[2J";  // wyczysc ekran
+
+    int limit = std::min(SCREEN_HEIGHT - 1, (int) screen_.size() - startLine);
+    for(int line = 0; line < limit; ++line)
+        ss << screen_[startLine + line] << "\r\n";
+
+    for(int line = limit; line < SCREEN_HEIGHT - 1; ++line)
+        ss << "\r\n";
 
     return ss.str();
+}
+
+void TelnetServer::endSession(TelnetSession& session)
+{
+    sessions_.erase(&session);
 }
 
 void TelnetServer::accept_()
@@ -42,7 +51,11 @@ void TelnetServer::accept_()
 void TelnetServer::onAccept_(const error_code& error)
 {
     if(!error)
-        new TelnetSession(std::move(socket_));
+    {
+        std::unique_ptr<TelnetSession>
+                session(new TelnetSession(*this, std::move(socket_)));
+        sessions_[session.get()] = std::move(session);
+    }
     else
         std::cerr << "TelnetServer, accept error: " << error << std::endl;
 
@@ -51,41 +64,46 @@ void TelnetServer::onAccept_(const error_code& error)
 
 void TelnetServer::updateScreen_()
 {
-    std::vector<Measurements::Data> data = mc_.getData();
+    bool ok = !sessions_.empty();
+
+    std::vector<Measurements::Data> data;
+
+    if(ok)
+       data = mc_.getData();
 
     if(data.empty())
+        ok = false;
+
+    if(ok)
     {
+        std::sort(data.begin(), data.end());
+
+        double maxMean = data[0].mean;
+
+        size_t maxAddressLen = 0;
+        size_t maxRenderLen = 0;
+        for(const Measurements::Data& d : data)
+        {
+            maxAddressLen = std::max(d.address.size(), maxAddressLen);
+            maxRenderLen = std::max(d.render.size(), maxRenderLen);
+        }
+
+        int space = SCREEN_WIDTH - maxAddressLen - maxRenderLen - 1;
+
         screen_.clear();
-        return;
+        for(int i = 0; i < data.size(); ++i)
+        {
+            std::stringstream ss;
+            ss << data[i].address
+               << std::string(maxAddressLen + 1 - data[i].address.size(), ' ')
+               << std::string((int) (data[i].mean / maxMean * space), ' ')
+               << data[i].render;
+            screen_.push_back(ss.str());
+        }
+
+        for(auto& p : sessions_)
+            p.second->updateScreen();
     }
-
-    std::sort(data.begin(), data.end());
-
-    double maxMean = data[0].mean;
-
-    size_t maxAddressLen = 0;
-    size_t maxRenderLen = 0;
-    for(const Measurements::Data& d : data)
-    {
-        maxAddressLen = std::max(d.address.size(), maxAddressLen);
-        maxRenderLen = std::max(d.render.size(), maxRenderLen);
-    }
-
-    size_t space = SCREEN_WIDTH - maxAddressLen - maxRenderLen - 1;
-
-    screen_.clear();
-    for(int i = 0; i < data.size(); ++i)
-    {
-        std::stringstream ss;
-        ss << data[i].address
-           << std::string(maxAddressLen + 1 - data[i].address.size(), ' ')
-           << std::string((size_t) (data[i].mean / maxMean * space), ' ')
-           << data[i].render << std::endl;
-        screen_.push_back(ss.str());
-
-std::cout << screen_.back();
-    }
-std::cout << std::endl;
 
     timer_.expires_from_now(boost::posix_time::seconds(1));
     timer_.async_wait(std::bind(&TelnetServer::updateScreen_, this));

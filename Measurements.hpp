@@ -14,7 +14,7 @@ class Measurements
         double mean;
 
         Data(): mean(0) {}
-        bool operator<(const Data& other) { return mean > other.mean; }
+        bool operator<(const Data& other) const { return mean > other.mean; }
     };
 
     Measurements(const std::string& address):
@@ -22,12 +22,11 @@ class Measurements
     void addUdp(int measurement) { add_(udp_, sumUdp_, measurement); }
     void addTcp(int measurement) { add_(tcp_, sumTcp_, measurement); }
     void addIcmp(int measurement) { add_(icmp_, sumIcmp_, measurement); }
-    Data getData();
+    Data getData() const;
 
   private:
     void add_(std::deque<int>& dq, int& sum, int msr);
     static double getMean_(const std::deque<int>& dq, int sum);
-    double getMean_();
     static void outputMeasurement_(std::ostream& os, double measurement);
 
     std::string address_;

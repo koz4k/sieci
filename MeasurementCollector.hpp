@@ -10,8 +10,8 @@
 class MeasurementCollector
 {
   public:
-    Measurements* collect(const std::string& address);
-    std::vector<Measurements::Data> getData();
+    Measurements& collect(const std::string& address);
+    std::vector<Measurements::Data> getData() const;
 
   private:
     std::unordered_map<std::string,
