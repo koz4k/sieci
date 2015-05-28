@@ -1,13 +1,13 @@
 #include "MeasurementCollector.hpp"
 
-Measurements& MeasurementCollector::collect(const std::string& address)
+Measurements& MeasurementCollector::startCollecting(const std::string& address)
 {
     auto it = measurements_.find(address);
     if(it == measurements_.end())
     {
         it = measurements_.insert(std::make_pair(address,
                 std::unique_ptr<Measurements>(
-                        new Measurements(address)))).first;
+                        new Measurements(address, typeCount_)))).first;
     }
     Measurements* m = it->second.get();
 

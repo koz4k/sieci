@@ -9,23 +9,23 @@ int main(int argc, char** argv)
 {
     try
     {
-        MeasurementCollector mc;
+        MeasurementCollector mc(3);
 
-        Measurements& m1 = mc.collect("127.0.0.1");
-        m1.addUdp(123);
-        m1.addUdp(0);
-        m1.addTcp(123);
-        m1.addIcmp(123);
-        m1.addTcp(12);
+        Measurements& m1 = mc.startCollecting("127.0.0.1");
+        m1.collect(0, 123);
+        m1.collect(0, 0);
+        m1.collect(1, 123);
+        m1.collect(2, 123);
+        m1.collect(1, 12);
 
-        Measurements& m2 = mc.collect("kurzastopa.pl");
-        m2.addUdp(321);
-        m2.addIcmp(23);
+        Measurements& m2 = mc.startCollecting("kurzastopa.pl");
+        m2.collect(0, 321);
+        m2.collect(2, 23);
 
-        mc.collect("hubbabubbabubbabubba");
+        mc.startCollecting("hubbabubbabubbabubba");
 
         for(char c = 'a'; c <= 'z'; ++c)
-            mc.collect(std::string(16, c)).addTcp('z' - c + 1);
+            mc.startCollecting(std::string(16, c)).collect(1, 'z' - c + 1);
 
         io_service io;
         TelnetServer server(mc, io, 2015);

@@ -10,12 +10,15 @@
 class MeasurementCollector
 {
   public:
-    Measurements& collect(const std::string& address);
+    explicit MeasurementCollector(int typeCount):
+        typeCount_(typeCount) {}
+    Measurements& startCollecting(const std::string& address);
     std::vector<Measurements::Data> getData() const;
 
   private:
     std::unordered_map<std::string,
             std::unique_ptr<Measurements>> measurements_;
+    int typeCount_;
 };
 
 #endif

@@ -9,8 +9,12 @@ Measurements::Data Measurements::getData() const
     Data data;
     data.address = address_;
 
-    std::array<double, 3> means{getMean_(udp_, sumUdp_),
-            getMean_(tcp_, sumTcp_), getMean_(icmp_, sumIcmp_)};
+    std::vector<double> means;
+    for(int type = 0; type < measurements_.size(); ++type)
+    {
+        means.push_back(measurements_[type].empty() ? NAN :
+                        ((double) sums_[type]) / measurements_.size());
+    }
 
     std::stringstream ss;
     double sum = 0;
@@ -35,21 +39,16 @@ Measurements::Data Measurements::getData() const
     return data;
 }
 
-void Measurements::add_(std::deque<int>& dq, int& sum, int msr)
+void Measurements::collect(int type, int measurement)
 {
-    if(dq.size() == MEASUREMENT_MEAN_OVER)
+    if(measurements_[type].size() == MEASUREMENT_MEAN_OVER)
     {
-        sum -= dq.front();
-        dq.pop_front();
+        sums_[type] -= measurements_[type].front();
+        measurements_[type].pop_front();
     }
 
-    dq.push_back(msr);
-    sum += dq.back();
-}
-
-double Measurements::getMean_(const std::deque<int>& dq, int sum)
-{
-    return dq.empty() ? NAN : ((double) sum) / dq.size();
+    sums_[type] += measurement;
+    measurements_[type].push_back(measurement);
 }
 
 void Measurements::outputMeasurement_(std::ostream& os, double measurement)
