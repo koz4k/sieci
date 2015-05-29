@@ -1,5 +1,6 @@
 #include "MeasurementManager.hpp"
 #include "TelnetServer.hpp"
+#include "DummyMeasurer.hpp"
 #include <boost/asio.hpp>
 #include <iostream>
 
@@ -9,23 +10,18 @@ int main(int argc, char** argv)
 {
     try
     {
-        MeasurementManager mm(3);
+        MeasurementManager mm({MeasurementType(DummyMeasurer::create),
+                MeasurementType(DummyMeasurer::create)});
 
-        MeasurementCollector& c1 = mm.startCollecting("127.0.0.1");
-        c1.collect(0, 123);
-        c1.collect(0, 0);
-        c1.collect(1, 123);
-        c1.collect(2, 123);
-        c1.collect(1, 12);
-
-        MeasurementCollector& c2 = mm.startCollecting("kurzastopa.pl");
-        c2.collect(0, 321);
-        c2.collect(2, 23);
-
+        mm.startCollecting("127.0.0.1");
+        mm.measure();
+        mm.startCollecting("kurzastopa.pl");
+        mm.measure();
         mm.startCollecting("hubbabubbabubbabubba");
-
+        mm.measure();
         for(char c = 'a'; c <= 'z'; ++c)
-            mm.startCollecting(std::string(16, c)).collect(1, 'z' - c + 1);
+            mm.startCollecting(std::string(16, c));
+        mm.measure();
 
         io_service io;
         TelnetServer server(mm, io, 2015);

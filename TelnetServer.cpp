@@ -71,6 +71,15 @@ void TelnetServer::updateScreen_()
     if(ok)
        data = mm_.getData();
 
+    for(int i = 0; i < data.size(); ++i)
+    {
+        if(isnan(data[i].mean))
+        {
+            data[i--] = std::move(data.back());
+            data.pop_back();
+        }
+    }
+
     if(data.empty())
         ok = false;
 
