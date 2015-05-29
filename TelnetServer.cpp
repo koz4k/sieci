@@ -13,9 +13,9 @@ using namespace boost::asio;
 using namespace boost::system;
 using boost::asio::ip::tcp;
 
-TelnetServer::TelnetServer(MeasurementCollector& mc, io_service& io,
+TelnetServer::TelnetServer(MeasurementManager& mm, io_service& io,
                            uint16_t port):
-    mc_(mc), acceptor_(io, tcp::endpoint(tcp::v4(), port)), socket_(io),
+    mm_(mm), acceptor_(io, tcp::endpoint(tcp::v4(), port)), socket_(io),
     timer_(io, boost::posix_time::seconds(1))
 {
     accept_();
@@ -66,10 +66,10 @@ void TelnetServer::updateScreen_()
 {
     bool ok = !sessions_.empty();
 
-    std::vector<Measurements::Data> data;
+    std::vector<MeasurementCollector::Data> data;
 
     if(ok)
-       data = mc_.getData();
+       data = mm_.getData();
 
     if(data.empty())
         ok = false;
@@ -82,7 +82,7 @@ void TelnetServer::updateScreen_()
 
         size_t maxAddressLen = 0;
         size_t maxRenderLen = 0;
-        for(const Measurements::Data& d : data)
+        for(const MeasurementCollector::Data& d : data)
         {
             maxAddressLen = std::max(d.address.size(), maxAddressLen);
             maxRenderLen = std::max(d.render.size(), maxRenderLen);

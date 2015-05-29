@@ -1,24 +1,34 @@
 #ifndef MEASUREMENT_COLLECTOR_HPP
 #define MEASUREMENT_COLLECTOR_HPP
 
-#include "Measurements.hpp"
+#include <deque>
 #include <vector>
-#include <unordered_map>
-#include <memory>
-#include <string>
+#include <ostream>
 
 class MeasurementCollector
 {
   public:
-    explicit MeasurementCollector(int typeCount):
-        typeCount_(typeCount) {}
-    Measurements& startCollecting(const std::string& address);
-    std::vector<Measurements::Data> getData() const;
+    struct Data
+    {
+        std::string address;
+        std::string render;
+        double mean;
+
+        Data(): mean(0) {}
+        bool operator<(const Data& other) const { return mean > other.mean; }
+    };
+
+    MeasurementCollector(const std::string& address, int typeCount):
+        address_(address), measurements_(typeCount), sums_(typeCount) {}
+    void collect(int type, int measurement);
+    Data getData() const;
 
   private:
-    std::unordered_map<std::string,
-            std::unique_ptr<Measurements>> measurements_;
-    int typeCount_;
+    static void outputMeasurement_(std::ostream& os, double measurement);
+
+    std::string address_;
+    std::vector<std::deque<int>> measurements_;
+    std::vector<int> sums_;
 };
 
 #endif

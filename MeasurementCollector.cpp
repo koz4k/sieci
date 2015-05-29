@@ -1,24 +1,61 @@
 #include "MeasurementCollector.hpp"
+#include "constants.hpp"
+#include <array>
+#include <sstream>
+#include <cmath>
 
-Measurements& MeasurementCollector::startCollecting(const std::string& address)
+MeasurementCollector::Data MeasurementCollector::getData() const
 {
-    auto it = measurements_.find(address);
-    if(it == measurements_.end())
-    {
-        it = measurements_.insert(std::make_pair(address,
-                std::unique_ptr<Measurements>(
-                        new Measurements(address, typeCount_)))).first;
-    }
-    Measurements* m = it->second.get();
+    Data data;
+    data.address = address_;
 
-    return *m;
+    std::vector<double> means;
+    for(int type = 0; type < measurements_.size(); ++type)
+    {
+        means.push_back(measurements_[type].empty() ? NAN :
+                        ((double) sums_[type]) / measurements_.size());
+    }
+
+    std::stringstream ss;
+    double sum = 0;
+    int c = 0;
+    for(double m : means)
+    {
+        outputMeasurement_(ss, m);
+        ss << " ";
+
+        if(!isnan(m))
+        {
+            sum += m;
+            ++c;
+        }
+    }
+
+    data.render = ss.str();
+    data.render = data.render.substr(0, data.render.size() - 1);
+
+    data.mean = c ? sum / c : 0;
+
+    return data;
 }
 
-std::vector<Measurements::Data> MeasurementCollector::getData() const
+void MeasurementCollector::collect(int type, int measurement)
 {
-    std::vector<Measurements::Data> ms;
-    for(const auto& p : measurements_)
-        ms.push_back(p.second->getData());
+    if(measurements_[type].size() == MEASUREMENT_MEAN_OVER)
+    {
+        sums_[type] -= measurements_[type].front();
+        measurements_[type].pop_front();
+    }
 
-    return ms;
+    sums_[type] += measurement;
+    measurements_[type].push_back(measurement);
+}
+
+void MeasurementCollector::outputMeasurement_(std::ostream& os,
+        double measurement)
+{
+    if(!isnan(measurement))
+        os << (int) measurement;
+    else
+        os << "n/a";
 }

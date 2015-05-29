@@ -1,7 +1,7 @@
 #ifndef TELNET_SERVER_HPP
 #define TELNET_SERVER_HPP
 
-#include "MeasurementCollector.hpp"
+#include "MeasurementManager.hpp"
 #include "TelnetSession.hpp"
 #include <boost/asio.hpp>
 #include <vector>
@@ -16,7 +16,7 @@ class TelnetSession;
 class TelnetServer
 {
   public:
-    TelnetServer(MeasurementCollector& mc, boost::asio::io_service& io,
+    TelnetServer(MeasurementManager& mm, boost::asio::io_service& io,
                  uint16_t port);
     int getScreenHeight() const { return screen_.size(); }
     std::string getScreen(int startLine) const;
@@ -29,7 +29,7 @@ class TelnetServer
 
     std::unordered_map<TelnetSession*,
                        std::unique_ptr<TelnetSession>> sessions_;
-    MeasurementCollector& mc_;
+    MeasurementManager& mm_;
     boost::asio::ip::tcp::acceptor acceptor_;
     boost::asio::ip::tcp::socket socket_;
     std::vector<std::string> screen_;
