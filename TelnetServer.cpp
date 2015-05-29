@@ -56,7 +56,8 @@ void TelnetServer::onAccept_(const error_code& error)
         sessions_[session.get()] = std::move(session);
     }
     else
-        std::cerr << "TelnetServer, accept error: " << error << std::endl;
+        std::cerr << "TelnetServer, accept error: " << error.message()
+                  << std::endl;
 
     accept_();
 }
@@ -108,10 +109,10 @@ void TelnetServer::updateScreen_()
                << data[i].render;
             screen_.push_back(ss.str());
         }
-
-        for(auto& p : sessions_)
-            p.second->updateScreen();
     }
+
+    for(auto& p : sessions_)
+        p.second->updateScreen();
 
     timer_.expires_from_now(boost::posix_time::seconds(1));
     timer_.async_wait(std::bind(&TelnetServer::updateScreen_, this));

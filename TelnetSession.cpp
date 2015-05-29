@@ -100,6 +100,6 @@ void TelnetSession::error_(const char* action, const error_code& error)
 {
     std::cerr << "TelnetSession with "
               << socket_.remote_endpoint().address().to_string() << ", "
-              << action << " error: " << error << std::endl;
+              << action << " error: " << error.message() << std::endl;
     server_.endSession(*this);
 }
