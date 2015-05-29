@@ -10,7 +10,7 @@ class TelnetServer;
 class TelnetSession
 {
   public:
-    TelnetSession(TelnetServer& server, boost::asio::ip::tcp::socket&& socket);
+    TelnetSession(TelnetServer& server, boost::asio::ip::tcp::socket socket);
     void updateScreen();
 
   private:

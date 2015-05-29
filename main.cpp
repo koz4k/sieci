@@ -1,10 +1,8 @@
 #include "MeasurementManager.hpp"
 #include "TelnetServer.hpp"
 #include "DummyMeasurer.hpp"
-#include <boost/asio.hpp>
+#include "io.hpp"
 #include <iostream>
-
-using namespace boost::asio;
 
 int main(int argc, char** argv)
 {
@@ -23,12 +21,13 @@ int main(int argc, char** argv)
             mm.startCollecting(std::string(16, c));
         mm.measure();
 
-        io_service io;
-        TelnetServer server(mm, io, 2015);
+        TelnetServer server(mm, 2015);
         io.run();
     }
     catch(std::exception& e)
     {
         std::cerr << e.what() << std::endl;
     }
+
+    return 0;
 }

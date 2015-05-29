@@ -13,8 +13,7 @@ using namespace boost::asio;
 using namespace boost::system;
 using boost::asio::ip::tcp;
 
-TelnetServer::TelnetServer(MeasurementManager& mm, io_service& io,
-                           uint16_t port):
+TelnetServer::TelnetServer(MeasurementManager& mm, uint16_t port):
     mm_(mm), acceptor_(io, tcp::endpoint(tcp::v4(), port)), socket_(io),
     timer_(io, boost::posix_time::seconds(1))
 {

@@ -9,7 +9,7 @@ using namespace boost::asio;
 using namespace boost::system;
 using boost::asio::ip::tcp;
 
-TelnetSession::TelnetSession(TelnetServer& server, tcp::socket&& socket):
+TelnetSession::TelnetSession(TelnetServer& server, tcp::socket socket):
     server_(server), socket_(std::move(socket)), ready_(false), line_(0)
 {
     // wylacz linemode
