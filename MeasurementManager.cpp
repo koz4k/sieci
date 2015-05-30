@@ -14,7 +14,35 @@ MeasurementManager::MeasurementManager(
     timer_.async_wait(std::bind(&MeasurementManager::measure_, this));
 }
 
-void MeasurementManager::startCollecting(const std::string& address)
+const std::vector<MeasurementService>& MeasurementManager::getServices() const
+{
+    return services_;
+}
+
+void MeasurementManager::activateHostsService(const std::string& address,
+        const MeasurementService* service)
+{
+    getCollector_(address).activateService(service);
+}
+
+void MeasurementManager::setHosts(const std::unordered_map<std::string,
+        std::vector<const MeasurementService*>>& hosts)
+{
+    auto it = collectors_.begin();
+    while(it != collectors_.cend())
+    {
+        if(hosts.find(it->first) == hosts.cend())
+            it = collectors_.erase(it);
+        else
+            ++it;
+    }
+
+    for(const auto& host : hosts)
+        getCollector_(host.first).setActiveServices(host.second);
+}
+
+MeasurementCollector& MeasurementManager::getCollector_(
+        const std::string& address)
 {
     auto it = collectors_.find(address);
     if(it == collectors_.end())
@@ -23,6 +51,7 @@ void MeasurementManager::startCollecting(const std::string& address)
                 std::unique_ptr<MeasurementCollector>(
                         new MeasurementCollector(address, services_)))).first;
     }
+    return *it->second;
 }
 
 void MeasurementManager::measure_()

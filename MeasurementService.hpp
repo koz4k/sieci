@@ -17,7 +17,8 @@ class MeasurementService
   public:
     explicit MeasurementService(MeasurerFactory_ measurerFactory):
             measurerFactory_(measurerFactory), index_(0) {}
-    std::unique_ptr<Measurer> createMeasurer(MeasurementCollector& collector) const;
+    std::unique_ptr<Measurer> createMeasurer(
+            MeasurementCollector& collector) const;
     int getIndex() const { return index_; }
     void setIndex(int index) { index_ = index; }
 

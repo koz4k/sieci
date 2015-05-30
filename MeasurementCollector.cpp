@@ -15,6 +15,26 @@ MeasurementCollector::MeasurementCollector(const std::string& address,
     }
 }
 
+void MeasurementCollector::activateService(const MeasurementService* service)
+{
+    measurers_[service->getIndex()]->setActive(true);
+}
+
+void MeasurementCollector::setActiveServices(
+        const std::vector<const MeasurementService*>& services)
+{
+    int j = 0;
+    for(int i = 0; i < services.size(); ++i)
+    {
+        while(j < services[i]->getIndex())
+            measurers_[j++]->setActive(false);
+        measurers_[j++]->setActive(true);
+    }
+
+    while(j < measurers_.size())
+        measurers_[j++]->setActive(false);
+}
+
 void MeasurementCollector::measure()
 {
     for(auto& m : measurers_)

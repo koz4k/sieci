@@ -13,10 +13,15 @@ class MeasurementManager
 {
   public:
     explicit MeasurementManager(std::vector<MeasurementService> services);
-    void startCollecting(const std::string& address);
+    const std::vector<MeasurementService>& getServices() const;
+    void activateHostsService(const std::string& address,
+            const MeasurementService* service);
+    void setHosts(const std::unordered_map<std::string,
+            std::vector<const MeasurementService*>>& hosts);
     std::vector<MeasurementCollector::Data> getData() const;
 
   private:
+    MeasurementCollector& getCollector_(const std::string& address);
     void measure_();
 
     std::vector<MeasurementService> services_;
