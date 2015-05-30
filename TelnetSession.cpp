@@ -98,7 +98,7 @@ void TelnetSession::beep_()
 
 void TelnetSession::error_(const char* action, const error_code& error)
 {
-    std::cerr << "TelnetSession with "
+    std::cerr << "TelnetSession assigned to "
               << socket_.remote_endpoint().address().to_string() << ", "
               << action << " error: " << error.message() << std::endl;
     server_.endSession(*this);

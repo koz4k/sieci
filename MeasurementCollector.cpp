@@ -9,13 +9,17 @@ MeasurementCollector::MeasurementCollector(const std::string& address,
     address_(address), measurements_(types.size()), sums_(types.size())
 {
     for(const MeasurementType& type : types)
+    {
         measurers_.push_back(type.createMeasurer(*this));
+        measurers_.back()->setActive(true);
+    }
 }
 
 void MeasurementCollector::measure()
 {
     for(auto& m : measurers_)
-        m->measure();
+        if(m->isActive())
+            m->measure();
 }
 
 void MeasurementCollector::collect(int type, int measurement)

@@ -15,7 +15,7 @@ using boost::asio::ip::tcp;
 
 TelnetServer::TelnetServer(MeasurementManager& mm, uint16_t port):
     mm_(mm), acceptor_(io, tcp::endpoint(tcp::v4(), port)), socket_(io),
-    timer_(io, boost::posix_time::seconds(1))
+    timer_(io)
 {
     accept_();
     updateScreen_();
@@ -64,6 +64,9 @@ void TelnetServer::onAccept_(const error_code& error)
 
 void TelnetServer::updateScreen_()
 {
+    timer_.expires_from_now(boost::posix_time::seconds(1));
+    timer_.async_wait(std::bind(&TelnetServer::updateScreen_, this));
+
     bool ok = !sessions_.empty();
 
     std::vector<MeasurementCollector::Data> data;
@@ -113,7 +116,4 @@ void TelnetServer::updateScreen_()
 
     for(auto& p : sessions_)
         p.second->updateScreen();
-
-    timer_.expires_from_now(boost::posix_time::seconds(1));
-    timer_.async_wait(std::bind(&TelnetServer::updateScreen_, this));
 }

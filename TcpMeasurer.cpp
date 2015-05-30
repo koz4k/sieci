@@ -4,23 +4,12 @@
 
 using namespace boost::asio;
 using namespace boost::system;
-using boost::asio::ip::tcp;
 
 TcpMeasurer::TcpMeasurer(MeasurementCollector& collector, int typeIndex):
-    Measurer(collector, typeIndex), resolver_(io), socket_(io)
+    Measurer(collector, typeIndex),
+    endpoint_(ip::address::from_string(collector.getAddress()), 22),
+    socket_(io)
 {
-    tcp::resolver::query query(tcp::v4(), collector.getAddress(), "22");
-    resolver_.async_resolve(query,
-            [this](const error_code& error, tcp::resolver::iterator eit)
-            {
-                if(error)
-                {
-                    std::cerr << "TcpMeasurer, resolve error: "
-                              << error.message() << std::endl;
-                }
-                else
-                    eit_ = eit;
-            });
 }
 
 std::unique_ptr<Measurer> TcpMeasurer::create(MeasurementCollector& collector,
@@ -31,22 +20,17 @@ std::unique_ptr<Measurer> TcpMeasurer::create(MeasurementCollector& collector,
 
 void TcpMeasurer::startMeasurement_()
 {
-    if(eit_ == tcp::resolver::iterator())
-        return;
-
-    async_connect(socket_, eit_,
-            [this](const error_code& error, tcp::resolver::iterator eit)
+    socket_.async_connect(endpoint_,
+            [this](const error_code& error)
             {
-                if(error)
-                {
-                    std::cerr << "TcpMeasurer, connect error: "
-                              << error.message() << std::endl;
-                }
-                else
-                {
+                if(!error)
                     endMeasurement_();
-                    socket_.close();
-                    eit_ = eit;
-                }
+                else
+                    std::cerr << "TcpMeasurer assigned to "
+                              << endpoint_.address().to_string()
+                              << ", connect error: " << error.message()
+                              << std::endl;
+
+                socket_.close();
             });
 }

@@ -15,8 +15,7 @@ class TcpMeasurer: public Measurer
     void startMeasurement_();
 
   private:
-    boost::asio::ip::tcp::resolver resolver_;
-    boost::asio::ip::tcp::resolver::iterator eit_;
+    boost::asio::ip::tcp::endpoint endpoint_;
     boost::asio::ip::tcp::socket socket_;
 };
 
