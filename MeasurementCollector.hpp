@@ -2,14 +2,14 @@
 #define MEASUREMENT_COLLECTOR_HPP
 
 #include "Measurer.hpp"
-#include "MeasurementType.hpp"
+#include "MeasurementService.hpp"
 #include <vector>
 #include <memory>
 #include <deque>
 #include <ostream>
 
 class Measurer;
-class MeasurementType;
+class MeasurementService;
 
 class MeasurementCollector
 {
@@ -25,9 +25,9 @@ class MeasurementCollector
     };
 
     MeasurementCollector(const std::string& address,
-            const std::vector<MeasurementType>& types);
+            const std::vector<MeasurementService>& services);
     void measure();
-    void collect(int type, int measurement);
+    void collect(int index, int measurement);
     const std::string& getAddress() const { return address_; }
     Data getData() const;
 

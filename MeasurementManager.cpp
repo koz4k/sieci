@@ -3,11 +3,12 @@
 #include "io.hpp"
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-MeasurementManager::MeasurementManager(std::vector<MeasurementType> types):
-    types_(std::move(types)), timer_(io)
+MeasurementManager::MeasurementManager(
+        std::vector<MeasurementService> services):
+    services_(std::move(services)), timer_(io)
 {
-    for(int index = 0; index < types_.size(); ++index)
-        types_[index].setIndex(index);
+    for(int index = 0; index < services_.size(); ++index)
+        services_[index].setIndex(index);
 
     timer_.expires_from_now(boost::posix_time::seconds(1));
     timer_.async_wait(std::bind(&MeasurementManager::measure_, this));
@@ -20,7 +21,7 @@ void MeasurementManager::startCollecting(const std::string& address)
     {
         it = collectors_.insert(std::make_pair(address,
                 std::unique_ptr<MeasurementCollector>(
-                        new MeasurementCollector(address, types_)))).first;
+                        new MeasurementCollector(address, services_)))).first;
     }
 }
 
@@ -29,7 +30,6 @@ void MeasurementManager::measure_()
     timer_.expires_from_now(boost::posix_time::seconds(1));
     timer_.async_wait(std::bind(&MeasurementManager::measure_, this));
     
-    for(int i = 0; i < 10; ++i)
     for(auto& p : collectors_)
         p.second->measure();
 }

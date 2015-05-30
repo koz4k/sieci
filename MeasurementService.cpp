@@ -1,6 +1,6 @@
-#include "MeasurementType.hpp"
+#include "MeasurementService.hpp"
 
-std::unique_ptr<Measurer> MeasurementType::createMeasurer(
+std::unique_ptr<Measurer> MeasurementService::createMeasurer(
         MeasurementCollector& collector) const
 {
     return measurerFactory_(collector, index_);

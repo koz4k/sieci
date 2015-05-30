@@ -8,7 +8,7 @@ int main(int argc, char** argv)
 {
     //try
     {
-        MeasurementManager mm({MeasurementType(TcpMeasurer::create)});
+        MeasurementManager mm({MeasurementService(TcpMeasurer::create)});
 
         mm.startCollecting("0.0.0.0");
         mm.startCollecting("127.0.0.1");

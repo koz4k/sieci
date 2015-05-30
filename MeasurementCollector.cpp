@@ -5,12 +5,12 @@
 #include <cmath>
 
 MeasurementCollector::MeasurementCollector(const std::string& address,
-        const std::vector<MeasurementType>& types):
-    address_(address), measurements_(types.size()), sums_(types.size())
+        const std::vector<MeasurementService>& services):
+    address_(address), measurements_(services.size()), sums_(services.size())
 {
-    for(const MeasurementType& type : types)
+    for(const MeasurementService& service : services)
     {
-        measurers_.push_back(type.createMeasurer(*this));
+        measurers_.push_back(service.createMeasurer(*this));
         measurers_.back()->setActive(true);
     }
 }
@@ -22,16 +22,16 @@ void MeasurementCollector::measure()
             m->measure();
 }
 
-void MeasurementCollector::collect(int type, int measurement)
+void MeasurementCollector::collect(int index, int measurement)
 {
-    if(measurements_[type].size() == MEASUREMENT_MEAN_OVER)
+    if(measurements_[index].size() == MEASUREMENT_MEAN_OVER)
     {
-        sums_[type] -= measurements_[type].front();
-        measurements_[type].pop_front();
+        sums_[index] -= measurements_[index].front();
+        measurements_[index].pop_front();
     }
 
-    sums_[type] += measurement;
-    measurements_[type].push_back(measurement);
+    sums_[index] += measurement;
+    measurements_[index].push_back(measurement);
 }
 
 MeasurementCollector::Data MeasurementCollector::getData() const
@@ -40,10 +40,10 @@ MeasurementCollector::Data MeasurementCollector::getData() const
     data.address = address_;
 
     std::vector<double> means;
-    for(int type = 0; type < measurements_.size(); ++type)
+    for(int index = 0; index < measurements_.size(); ++index)
     {
-        means.push_back(measurements_[type].empty() ? NAN :
-                        ((double) sums_[type]) / measurements_[type].size());
+        means.push_back(measurements_[index].empty() ? NAN :
+                        ((double) sums_[index]) / measurements_[index].size());
     }
 
     std::stringstream ss;
