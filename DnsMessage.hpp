@@ -3,14 +3,15 @@
 
 #include <vector>
 #include <string>
+#include <stdexcept>
 
-class DnsMessage
+struct DnsMessage
 {
-  public:
     enum ResponseCode
     {
         RCODE_OK = 0,
         RCODE_FORMAT_ERROR = 1,
+        RCODE_SERVER_FAILURE = 2,
         RCODE_NOT_IMPLEMENTED = 4
     };
 
@@ -36,25 +37,35 @@ class DnsMessage
     {
         std::vector<std::string> name;
         Type type;
-        std::string data;
+        int ttl;
+        std::vector<uint8_t> data;
+        std::vector<std::string> dname;
 
-        Resource(std::vector<std::string> name, Type type, std::string data):
-            name(std::move(name)), type(type), data(std::move(data)) {}
+        Resource(std::vector<std::string> name, Type type, int ttl,
+                std::vector<uint8_t> data, std::vector<std::string> dname):
+            name(std::move(name)), type(type), ttl(ttl), data(std::move(data)),
+            dname(std::move(dname)) {}
     };
 
-    explicit DnsMessage(bool response): response_(response) {}
+    class FormatError: public std::runtime_error
+    {
+      public:
+        using std::runtime_error::runtime_error;
+    };
+
+    explicit DnsMessage(bool isResponse, bool recursionDesired);
     explicit DnsMessage(const std::vector<uint8_t>& bytes);
     std::vector<uint8_t> serialize() const;
-    bool isResponse() const { return response_; }
-    void addQuestion(Question question);
-    void addAnswer(Resource answer);
-    void addAdditional(Resource additional);
     
-  private:
-    bool response_;
-    std::vector<Question> questions_;
-    std::vector<Resource> answers_;
-    std::vector<Resource> additionals_;
+    int id;
+    bool isResponse;
+    bool recursionDesired;
+    ResponseCode responseCode;
+
+    std::vector<Question> questions;
+    std::vector<Resource> answers;
+    std::vector<Resource> authorities;
+    std::vector<Resource> additionals;
 };
 
 #endif
