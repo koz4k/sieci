@@ -40,12 +40,18 @@ std::vector<std::string> splitName(const std::string& str)
     return name;
 }
 
+std::vector<std::string> splitService(const std::string& str)
+{
+    int dot = str.find('.');
+    return {str.substr(0, dot), str.substr(dot + 1)};
+}
+
 std::string ipToString(const std::vector<uint8_t>& bytes)
 {
     std::stringstream ss;
     for(int i = 0; i < bytes.size() - 1; ++i)
         ss << (uint32_t) bytes[i] << '.';
-    ss << bytes.back();
+    ss << (uint32_t) bytes.back();
     return ss.str();
 }
 
@@ -148,6 +154,7 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
         if(!received.isResponse && senderEndpoint_.port() != 5353)
         {
             send = true;
+            toSend.questions = received.questions;
             endpoint = senderEndpoint_;
         }
         else
@@ -172,7 +179,17 @@ void ServiceDiscoverer::discover_()
     discoverTimer_.expires_from_now(boost::posix_time::seconds(10));
     discoverTimer_.async_wait(std::bind(&ServiceDiscoverer::discover_, this));
 
-    manager_.activateServiceForHost("127.0.0.1", &manager_.getServices()[0]);
+    DnsMessage message;
+    for(const MeasurementService& service : manager_.getServices())
+    {
+        std::vector<std::string> name = splitService(service.getName());
+        name.push_back("local");
+        message.questions.push_back(DnsMessage::Question(std::move(name),
+                DnsMessage::TYPE_PTR)); // TODO: unicast response
+    }
+
+    if(!message.isEmpty())
+        send_(message, multicastEndpoint_);
 }
 
 void ServiceDiscoverer::update_()
