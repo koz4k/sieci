@@ -1,7 +1,7 @@
 TARGET: opoznienia
 
 CC	= g++
-CFLAGS	= -Wall -O2 -std=c++11
+CFLAGS	= -Wall -O2 -std=c++11 -g
 LFLAGS	= -Wall -lboost_system
 
 %.o: %.cpp

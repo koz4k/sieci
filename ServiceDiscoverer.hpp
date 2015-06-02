@@ -2,6 +2,7 @@
 #define SERVICE_DISCOVERER_HPP
 
 #include "MeasurementManager.hpp"
+#include "DnsMessage.hpp"
 #include "constants.hpp"
 #include <boost/asio.hpp>
 #include <unordered_set>
@@ -16,6 +17,8 @@ class ServiceDiscoverer
     void onReceive_(const boost::system::error_code& error, size_t len);
     void discover_();
     void update_();
+    void send_(const DnsMessage& message,
+            const boost::asio::ip::udp::endpoint& endpoint);
 
     std::string instance_;
     MeasurementManager& manager_;

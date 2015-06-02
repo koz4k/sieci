@@ -4,6 +4,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <sstream>
 #include <functional>
+#include <algorithm>
 #include <iostream>
 
 using namespace boost::asio;
@@ -16,6 +17,27 @@ std::string joinName(const std::vector<std::string>& name, int start = 0)
     for(int i = start; i < name.size(); ++i)
         ss << name[i] << ".";
     return ss.str();
+}
+
+std::vector<std::string> splitName(const std::string& str)
+{
+    std::vector<std::string> name;
+    int dot = 0;
+    int i = str.size() - 1, j = str.size() - 1;
+    while(i >= 0 && dot < 4)
+    {
+        if(str[i] == '.')
+        {
+            dot += 1;
+            if(i < j)
+                name.push_back(str.substr(i + 1, j - i - 1));
+            j = i;
+        }
+        i -= 1;
+    }
+    name.push_back(str.substr(0, i));
+    std::reverse(name.begin(), name.end());
+    return name;
 }
 
 std::string ipToString(const std::vector<uint8_t>& bytes)
@@ -75,7 +97,7 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
                         dname.insert(dname.end(), question.name.begin(),
                                 question.name.end());
                         toSend.answers.push_back(DnsMessage::Resource(
-                                std::move(question.name), question.type, 10,
+                                std::move(question.name), question.type, 11,
                                 std::move(dname)));
                     }
                     break;
@@ -90,7 +112,7 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
                         std::array<uint8_t, 4> bytes = addr.to_v4().to_bytes();
                         std::vector<uint8_t> data(bytes.begin(), bytes.end());
                         toSend.answers.push_back(DnsMessage::Resource(
-                                std::move(question.name), question.type, 10,
+                                std::move(question.name), question.type, 11,
                                 std::move(data)));
                     }
                     break;
@@ -133,20 +155,7 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
 
         // TODO: unicast response, delay before sending
         if(send)
-        {
-            auto data = std::make_shared<std::vector<uint8_t>>(
-                    toSend.serialize());
-
-            socket_.async_send_to(buffer(*data), senderEndpoint_,
-                    [data](const error_code& error, size_t len)
-                    {
-                        if(error)
-                        {
-                            std::cerr << "ServiceDiscoverer, send error: "
-                                      << error.message() << std::endl;
-                        }
-                    });
-        }
+            send_(toSend, endpoint);
     }
     else
     {
@@ -170,4 +179,38 @@ void ServiceDiscoverer::update_()
 {
     updateTimer_.expires_from_now(boost::posix_time::seconds(1));
     updateTimer_.async_wait(std::bind(&ServiceDiscoverer::update_, this));
+
+    DnsMessage query;
+
+    auto it = cache_.begin();
+    while(it != cache_.end())
+    {
+        it->second.second -= 1;
+        if(it->second.second <= 0)
+        {
+            query.questions.push_back(DnsMessage::Question(
+                    splitName(it->first), DnsMessage::TYPE_A));
+            it = cache_.erase(it);
+        }
+        else
+            ++it;
+    }
+
+    if(!query.isEmpty())
+        send_(query, multicastEndpoint_);
+}
+
+void ServiceDiscoverer::send_(const DnsMessage& message,
+        const udp::endpoint& endpoint)
+{
+    auto data = std::make_shared<std::vector<uint8_t>>(message.serialize());
+    socket_.async_send_to(buffer(*data), endpoint,
+            [data](const error_code& error, size_t len)
+            {
+                if(error)
+                {
+                    std::cerr << "ServiceDiscoverer, send error: "
+                              << error.message() << std::endl;
+                }
+            });
 }
