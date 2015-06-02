@@ -19,13 +19,14 @@ class ServiceDiscoverer
 
     std::string instance_;
     MeasurementManager& manager_;
-    std::unordered_set<std::string> announcedServices_;
+    std::unordered_map<std::string, const MeasurementService*> services_;
     boost::asio::deadline_timer updateTimer_;
     boost::asio::deadline_timer discoverTimer_;
     boost::asio::ip::udp::socket socket_;
     std::vector<uint8_t> buffer_;
     boost::asio::ip::udp::endpoint multicastEndpoint_;
     boost::asio::ip::udp::endpoint senderEndpoint_;
+    std::unordered_map<std::string, std::pair<std::string, int>> cache_;
 };
 
 #endif

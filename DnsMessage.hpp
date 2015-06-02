@@ -28,7 +28,7 @@ struct DnsMessage
         bool unicastResponse;
 
         Question(std::vector<std::string> name, Type type,
-                bool unicastResponse):
+                bool unicastResponse = false):
             name(std::move(name)), type(type),
             unicastResponse(unicastResponse) {}
     };
