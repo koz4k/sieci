@@ -42,8 +42,12 @@ struct DnsMessage
         std::vector<std::string> dname;
 
         Resource(std::vector<std::string> name, Type type, int ttl,
-                std::vector<uint8_t> data, std::vector<std::string> dname):
-            name(std::move(name)), type(type), ttl(ttl), data(std::move(data)),
+                std::vector<uint8_t> data):
+            name(std::move(name)), type(type), ttl(ttl),
+            data(std::move(data)) {}
+        Resource(std::vector<std::string> name, Type type, int ttl,
+                std::vector<std::string> dname):
+            name(std::move(name)), type(type), ttl(ttl),
             dname(std::move(dname)) {}
     };
 
@@ -53,9 +57,10 @@ struct DnsMessage
         using std::runtime_error::runtime_error;
     };
 
-    explicit DnsMessage(bool isResponse, bool recursionDesired);
+    explicit DnsMessage(bool isResponse = false, bool recursionDesired = false);
     explicit DnsMessage(const std::vector<uint8_t>& bytes);
     std::vector<uint8_t> serialize() const;
+    bool isEmpty() const;
     
     int id;
     bool isResponse;

@@ -20,19 +20,9 @@ void MeasurementCollector::activateService(const MeasurementService* service)
     measurers_[service->getIndex()]->setActive(true);
 }
 
-void MeasurementCollector::setActiveServices(
-        const std::vector<const MeasurementService*>& services)
+void MeasurementCollector::deactivateService(const MeasurementService* service)
 {
-    int j = 0;
-    for(int i = 0; i < services.size(); ++i)
-    {
-        while(j < services[i]->getIndex())
-            measurers_[j++]->setActive(false);
-        measurers_[j++]->setActive(true);
-    }
-
-    while(j < measurers_.size())
-        measurers_[j++]->setActive(false);
+    measurers_[service->getIndex()]->setActive(false);
 }
 
 void MeasurementCollector::measure()

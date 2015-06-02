@@ -19,26 +19,16 @@ const std::vector<MeasurementService>& MeasurementManager::getServices() const
     return services_;
 }
 
-void MeasurementManager::activateHostsService(const std::string& address,
+void MeasurementManager::activateServiceForHost(const std::string& address,
         const MeasurementService* service)
 {
     getCollector_(address).activateService(service);
 }
 
-void MeasurementManager::setHosts(const std::unordered_map<std::string,
-        std::vector<const MeasurementService*>>& hosts)
+void MeasurementManager::deactivateServiceForHost(const std::string& address,
+        const MeasurementService* service)
 {
-    auto it = collectors_.begin();
-    while(it != collectors_.cend())
-    {
-        if(hosts.find(it->first) == hosts.cend())
-            it = collectors_.erase(it);
-        else
-            ++it;
-    }
-
-    for(const auto& host : hosts)
-        getCollector_(host.first).setActiveServices(host.second);
+    getCollector_(address).deactivateService(service);
 }
 
 MeasurementCollector& MeasurementManager::getCollector_(

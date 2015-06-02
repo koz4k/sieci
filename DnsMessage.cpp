@@ -2,8 +2,6 @@
 #include <arpa/inet.h>
 #include <cstring>
 
-uint16_t nowId = 0;
-
 struct __attribute__((packed, aligned(1))) PackedHeader
 {
     uint16_t id;
@@ -139,10 +137,17 @@ void serializeResource(std::vector<uint8_t>& bytes,
     PackedResourceMiddle middle;
     middle.type = htons((uint16_t) resource.type);
     middle.ttl = htonl((uint32_t) resource.ttl);
-    middle.rdlength = htons(resource.data.size());
+
+    std::vector<uint8_t> data;
+    if(resource.type == DnsMessage::TYPE_PTR)
+        serializeName(data, resource.dname);
+    else
+        data = resource.data;
+
+    middle.rdlength = htons(data.size());
     serializePrimitive(bytes, middle);
     
-    bytes.insert(bytes.end(), resource.data.begin(), resource.data.end());
+    bytes.insert(bytes.end(), data.begin(), data.end());
 }
 
 DnsMessage::Resource deserializeResource(const std::vector<uint8_t>& bytes,
@@ -158,14 +163,20 @@ DnsMessage::Resource deserializeResource(const std::vector<uint8_t>& bytes,
     std::vector<uint8_t> data(&bytes[index], &bytes[index + len]);
     std::vector<std::string> dname;
     if(type == DnsMessage::TYPE_PTR)
-        dname = deserializeName(bytes, index);
-
-    return DnsMessage::Resource(std::move(name), type, ntohl(middle.ttl),
-            std::move(data), std::move(dname));
+    {
+        std::vector<std::string> dname = deserializeName(bytes, index);
+        return DnsMessage::Resource(std::move(name), type, ntohl(middle.ttl),
+                std::move(dname));
+    }
+    else
+    {
+        return DnsMessage::Resource(std::move(name), type, ntohl(middle.ttl),
+                std::move(data));
+    }
 }
 
 DnsMessage::DnsMessage(bool isResponse, bool recursionDesired):
-    id(nowId++), isResponse(isResponse), recursionDesired(recursionDesired),
+    id(0), isResponse(isResponse), recursionDesired(recursionDesired),
     responseCode(RCODE_OK)
 {
 }
@@ -221,4 +232,10 @@ std::vector<uint8_t> DnsMessage::serialize() const
         serializeResource(bytes, additional);
 
     return bytes;
+}
+
+bool DnsMessage::isEmpty() const
+{
+    return questions.empty() && answers.empty() && authorities.empty() &&
+        additionals.empty();
 }

@@ -27,8 +27,7 @@ class MeasurementCollector
     MeasurementCollector(const std::string& address,
             const std::vector<MeasurementService>& services);
     void activateService(const MeasurementService* service);
-    void setActiveServices(
-            const std::vector<const MeasurementService*>& services);
+    void deactivateService(const MeasurementService* service);
     void measure();
     void collect(int index, int measurement);
     const std::string& getAddress() const { return address_; }

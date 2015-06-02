@@ -9,10 +9,10 @@ int main(int argc, char** argv)
 {
     //try
     {
-        MeasurementManager mm({MeasurementService(TcpMeasurer::create)});
-
-        ServiceDiscoverer d(mm);
-
+        MeasurementManager mm({
+                MeasurementService("_ssh._tcp", TcpMeasurer::create)
+        });
+        ServiceDiscoverer d("hubbabubba", mm);
         TelnetServer t(mm, 2015);
         io.run();
     }

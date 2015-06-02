@@ -14,10 +14,10 @@ class MeasurementManager
   public:
     explicit MeasurementManager(std::vector<MeasurementService> services);
     const std::vector<MeasurementService>& getServices() const;
-    void activateHostsService(const std::string& address,
+    void activateServiceForHost(const std::string& address,
             const MeasurementService* service);
-    void setHosts(const std::unordered_map<std::string,
-            std::vector<const MeasurementService*>>& hosts);
+    void deactivateServiceForHost(const std::string& address,
+            const MeasurementService* service);
     std::vector<MeasurementCollector::Data> getData() const;
 
   private:
