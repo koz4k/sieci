@@ -8,8 +8,11 @@ void Measurer::measure()
     startMeasurement_();
 }
 
-void Measurer::endMeasurement_()
+void Measurer::endMeasurement_(int64_t measurement)
 {
-    collector_.collect(typeIndex_, microtime() - startTime_);
+    if(measurement == -1)
+        measurement = microtime() - startTime_;
+
+    collector_.collect(typeIndex_, measurement);
     active_ = true;
 }

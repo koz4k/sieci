@@ -21,15 +21,17 @@ std::unique_ptr<Measurer> TcpMeasurer::create(MeasurementCollector& collector,
 void TcpMeasurer::startMeasurement_()
 {
     socket_.async_connect(endpoint_,
-            [this](const error_code& error)
+            [this](const error_code& err)
             {
-                if(!error)
+                if(!err)
                     endMeasurement_();
                 else
+                {
                     std::cerr << "TcpMeasurer assigned to "
                               << endpoint_.address().to_string()
-                              << ", connect error: " << error.message()
+                              << ", connect error: " << err.message()
                               << std::endl;
+                }
 
                 socket_.close();
             });

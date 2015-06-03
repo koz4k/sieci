@@ -18,7 +18,7 @@ class Measurer
 
   protected:
     virtual void startMeasurement_() = 0;
-    void endMeasurement_();
+    void endMeasurement_(int64_t measurement = -1);
 
     bool active_;
 
