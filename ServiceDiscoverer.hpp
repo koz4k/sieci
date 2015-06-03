@@ -40,6 +40,7 @@ class ServiceDiscoverer
     boost::asio::ip::udp::endpoint multicastEndpoint_;
     boost::asio::ip::udp::endpoint senderEndpoint_;
     std::unordered_map<std::string, CacheEntry_> cache_;
+    bool firstDiscovery_;
 };
 
 #endif

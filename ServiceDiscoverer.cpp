@@ -65,7 +65,8 @@ ServiceDiscoverer::ServiceDiscoverer(std::string instance,
     instance_(std::move(instance)), manager_(manager), updateTimer_(io),
     discoverTimer_(io), socket_(io, udp::endpoint(udp::v4(), 5353)),
     buffer_(DNS_MESSAGE_MAX_LENGTH),
-    multicastEndpoint_(ip::address_v4({224, 0, 0, 251}), 5353)
+    multicastEndpoint_(ip::address_v4({224, 0, 0, 251}), 5353),
+    firstDiscovery_(true)
 {
     for(const MeasurementService& service : manager.getServices())
     {
@@ -98,12 +99,16 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
         std::vector<uint8_t> ipData(arr.begin(), arr.end());
 
         DnsMessage received(buffer_);
-        DnsMessage toSend;
+        DnsMessage toSend, toSendUnicast;
         if(!received.isResponse)
         {
             toSend.isResponse = true;
+            toSendUnicast.isResponse = true;
             for(DnsMessage::Question& question : received.questions)
             {
+                DnsMessage& response = question.unicastResponse ?
+                        toSendUnicast : toSend;
+
                 switch(question.type)
                 {
                   case DnsMessage::TYPE_PTR:
@@ -114,13 +119,13 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
                         dname.insert(dname.end(), question.name.begin(),
                                 question.name.end());
 
-                        toSend.answers.push_back(DnsMessage::Resource(
+                        response.answers.push_back(DnsMessage::Resource(
                                 question.name, DnsMessage::TYPE_PTR, 11,
                                 dname));
 
                         if(multicast)
                         {
-                            toSend.answers.push_back(DnsMessage::Resource(
+                            response.answers.push_back(DnsMessage::Resource(
                                     std::move(dname), DnsMessage::TYPE_A, 11,
                                     ipData));
                         }
@@ -133,7 +138,7 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
                             services_.find(joinName(question.name, 1))
                                     != services_.end())
                     {
-                        toSend.answers.push_back(DnsMessage::Resource(
+                        response.answers.push_back(DnsMessage::Resource(
                                 std::move(question.name), DnsMessage::TYPE_A,
                                 11, ipData));
                     }
@@ -187,9 +192,11 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
         else
             endpoint = multicastEndpoint_;
 
-        // TODO: unicast response, delay before sending
         if(send)
             send_(toSend, endpoint);
+
+        if(!toSendUnicast.isEmpty())
+            send_(toSendUnicast, senderEndpoint_);
     }
     else
     {
@@ -212,11 +219,13 @@ void ServiceDiscoverer::discover_()
         std::vector<std::string> name = splitService(service.getName());
         name.push_back("local");
         message.questions.push_back(DnsMessage::Question(std::move(name),
-                DnsMessage::TYPE_PTR)); // TODO: unicast response
+                DnsMessage::TYPE_PTR, firstDiscovery_));
     }
 
     if(!message.isEmpty())
         send_(message, multicastEndpoint_);
+
+    firstDiscovery_ = false;
 }
 
 void ServiceDiscoverer::update_()

@@ -115,7 +115,8 @@ void serializeQuestion(std::vector<uint8_t>& bytes,
 
     PackedQuestionFooter footer;
     footer.qtype = htons((uint16_t) question.type);
-    //footer.qu = question.unicastResponse;
+    if(question.unicastResponse)
+        footer.qclass = htons(0x8001);
     serializePrimitive(bytes, footer);
 }
 
@@ -128,7 +129,8 @@ DnsMessage::Question deserializeQuestion(const std::vector<uint8_t>& bytes,
             deserializePrimitive<PackedQuestionFooter>(bytes, index);
 
     return DnsMessage::Question(std::move(name),
-            (DnsMessage::Type) ntohs(footer.qtype), false); // ma byc QU
+            (DnsMessage::Type) ntohs(footer.qtype),
+            ntohs(footer.qclass) & 0x8000);
 }
 
 void serializeResource(std::vector<uint8_t>& bytes,

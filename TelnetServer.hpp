@@ -8,7 +8,6 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
-#include <iostream>
 #include <cstdint>
 
 class TelnetSession;
