@@ -32,6 +32,7 @@ class MeasurementCollector
     void collect(int index, int measurement);
     const std::string& getAddress() const { return address_; }
     Data getData() const;
+    int getActiveServiceCount() const { return activeServiceCount_; }
 
   private:
     static void outputMeasurement_(std::ostream& os, double measurement);
@@ -40,6 +41,7 @@ class MeasurementCollector
     std::vector<std::unique_ptr<Measurer>> measurers_;
     std::vector<std::deque<int>> measurements_;
     std::vector<int> sums_;
+    int activeServiceCount_;
 };
 
 #endif

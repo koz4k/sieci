@@ -28,7 +28,10 @@ void MeasurementManager::activateServiceForHost(const std::string& address,
 void MeasurementManager::deactivateServiceForHost(const std::string& address,
         const MeasurementService* service)
 {
-    getCollector_(address).deactivateService(service);
+    MeasurementCollector& collector = getCollector_(address);
+    collector.deactivateService(service);
+    if(collector.getActiveServiceCount() == 0)
+        collectors_.erase(address);
 }
 
 MeasurementCollector& MeasurementManager::getCollector_(

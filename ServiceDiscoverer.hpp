@@ -13,6 +13,16 @@ class ServiceDiscoverer
     ServiceDiscoverer(std::string instance, MeasurementManager& manager);
 
   private:
+    struct CacheEntry_
+    {
+        std::string address;
+        int originalTtl;
+        int currentTtl;
+
+        CacheEntry_(std::string address = "", int ttl = 0):
+            address(std::move(address)), originalTtl(ttl), currentTtl(ttl) {}
+    };
+
     void receive_();
     void onReceive_(const boost::system::error_code& error, size_t len);
     void discover_();
@@ -29,7 +39,7 @@ class ServiceDiscoverer
     std::vector<uint8_t> buffer_;
     boost::asio::ip::udp::endpoint multicastEndpoint_;
     boost::asio::ip::udp::endpoint senderEndpoint_;
-    std::unordered_map<std::string, std::pair<std::string, int>> cache_;
+    std::unordered_map<std::string, CacheEntry_> cache_;
 };
 
 #endif

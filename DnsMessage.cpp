@@ -65,7 +65,8 @@ std::vector<std::string> deserializeName(const std::vector<uint8_t>& bytes,
     std::vector<std::string> name;
     while(bytes[index])
     {
-        if(bytes[index] & 0xc0) // jesli 2 gorne bity sa zapalone, to offset
+        // jesli 2 gorne bity sa zapalone, to offset
+        if((bytes[index] & 0xc0) == 0xc0)
         {
             int offset = (bytes[index] & ~0xc0) << 8 | bytes[index + 1];
 
@@ -76,6 +77,7 @@ std::vector<std::string> deserializeName(const std::vector<uint8_t>& bytes,
             index += 2;
             std::vector<std::string> tail = deserializeName(bytes, offset);
             name.insert(name.end(), tail.begin(), tail.end());
+
             return name;
         }
 
@@ -161,6 +163,7 @@ DnsMessage::Resource deserializeResource(const std::vector<uint8_t>& bytes,
 
     int len = ntohs(middle.rdlength);
     std::vector<uint8_t> data(&bytes[index], &bytes[index + len]);
+
     std::vector<std::string> dname;
     if(type == DnsMessage::TYPE_PTR)
     {
@@ -170,6 +173,7 @@ DnsMessage::Resource deserializeResource(const std::vector<uint8_t>& bytes,
     }
     else
     {
+        index += len;
         return DnsMessage::Resource(std::move(name), type, ntohl(middle.ttl),
                 std::move(data));
     }

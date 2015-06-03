@@ -6,7 +6,8 @@
 
 MeasurementCollector::MeasurementCollector(const std::string& address,
         const std::vector<MeasurementService>& services):
-    address_(address), measurements_(services.size()), sums_(services.size())
+    address_(address), measurements_(services.size()), sums_(services.size()),
+    activeServiceCount_(services.size())
 {
     for(const MeasurementService& service : services)
     {
@@ -17,12 +18,24 @@ MeasurementCollector::MeasurementCollector(const std::string& address,
 
 void MeasurementCollector::activateService(const MeasurementService* service)
 {
-    measurers_[service->getIndex()]->setActive(true);
+    int index = service->getIndex();
+    if(!measurers_[index]->isActive())
+    {
+        measurers_[index]->setActive(true);
+        activeServiceCount_ += 1;
+    }
 }
 
 void MeasurementCollector::deactivateService(const MeasurementService* service)
 {
-    measurers_[service->getIndex()]->setActive(false);
+    int index = service->getIndex();
+    if(measurers_[index]->isActive())
+    {
+        measurers_[index]->setActive(false);
+        measurements_[index].clear();
+        sums_[index] = 0;
+        activeServiceCount_ -= 1;
+    }
 }
 
 void MeasurementCollector::measure()

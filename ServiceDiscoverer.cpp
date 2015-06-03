@@ -40,6 +40,11 @@ std::vector<std::string> splitName(const std::string& str)
     return name;
 }
 
+std::string getServiceFromName(const std::string& str)
+{
+    return joinName(splitName(str), 1);
+}
+
 std::vector<std::string> splitService(const std::string& str)
 {
     int dot = str.find('.');
@@ -86,6 +91,12 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
 {
     if(!error)
     {
+        bool multicast = senderEndpoint_.port() == 5353;
+
+        ip::address addr = socket_.local_endpoint().address();
+        std::array<uint8_t, 4> arr = addr.to_v4().to_bytes();
+        std::vector<uint8_t> ipData(arr.begin(), arr.end());
+
         DnsMessage received(buffer_);
         DnsMessage toSend;
         if(!received.isResponse)
@@ -102,9 +113,17 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
                         std::vector<std::string> dname{instance_};
                         dname.insert(dname.end(), question.name.begin(),
                                 question.name.end());
+
                         toSend.answers.push_back(DnsMessage::Resource(
-                                std::move(question.name), question.type, 11,
-                                std::move(dname)));
+                                question.name, DnsMessage::TYPE_PTR, 11,
+                                dname));
+
+                        if(multicast)
+                        {
+                            toSend.answers.push_back(DnsMessage::Resource(
+                                    std::move(dname), DnsMessage::TYPE_A, 11,
+                                    ipData));
+                        }
                     }
                     break;
 
@@ -114,12 +133,9 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
                             services_.find(joinName(question.name, 1))
                                     != services_.end())
                     {
-                        ip::address addr = socket_.local_endpoint().address();
-                        std::array<uint8_t, 4> bytes = addr.to_v4().to_bytes();
-                        std::vector<uint8_t> data(bytes.begin(), bytes.end());
                         toSend.answers.push_back(DnsMessage::Resource(
-                                std::move(question.name), question.type, 11,
-                                std::move(data)));
+                                std::move(question.name), DnsMessage::TYPE_A,
+                                11, ipData));
                     }
                     break;
                 }
@@ -129,29 +145,40 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
         {
             for(DnsMessage::Resource& answer : received.answers)
             {
-                switch(answer.type)
+                if(answer.type == DnsMessage::TYPE_A)
                 {
-                  case DnsMessage::TYPE_PTR:
-                    if(cache_.find(joinName(answer.dname)) == cache_.end())
-                        toSend.questions.push_back(DnsMessage::Question(
-                                std::move(answer.dname), DnsMessage::TYPE_A));
-                    break;
-
-                  case DnsMessage::TYPE_A:
                     std::string name = joinName(answer.name);
                     std::string host = ipToString(answer.data);
-                    cache_[name] = std::make_pair(host, answer.ttl);
+                    CacheEntry_ oldEntry = cache_[name];
+                    if(answer.ttl > oldEntry.currentTtl)
+                        cache_[name] = CacheEntry_(host, answer.ttl);
                     std::string serviceName = joinName(answer.name, 1);
-                    manager_.activateServiceForHost(host,
-                            services_[serviceName]);
-                    break;
+                    auto it = services_.find(serviceName);
+                    if(it != services_.end())
+                        manager_.activateServiceForHost(host,
+                                services_[serviceName]);
+                }
+            }
+
+            for(DnsMessage::Resource& answer : received.answers)
+            {
+                if(answer.type == DnsMessage::TYPE_PTR)
+                {
+                    if(services_.find(joinName(answer.dname, 1)) !=
+                                services_.end()
+                            && cache_.find(joinName(answer.dname)) ==
+                                    cache_.end())
+                    {
+                        toSend.questions.push_back(DnsMessage::Question(
+                                std::move(answer.dname), DnsMessage::TYPE_A));
+                    }
                 }
             }
         }
 
         bool send = !toSend.isEmpty();
         udp::endpoint endpoint;
-        if(!received.isResponse && senderEndpoint_.port() != 5353)
+        if(!received.isResponse && !multicast)
         {
             send = true;
             toSend.questions = received.questions;
@@ -202,15 +229,23 @@ void ServiceDiscoverer::update_()
     auto it = cache_.begin();
     while(it != cache_.end())
     {
-        it->second.second -= 1;
-        if(it->second.second <= 0)
+        it->second.currentTtl -= 1;
+        if(it->second.currentTtl == 0)
         {
-            query.questions.push_back(DnsMessage::Question(
-                    splitName(it->first), DnsMessage::TYPE_A));
+            manager_.deactivateServiceForHost(it->second.address,
+                    services_[getServiceFromName(it->first)]);
             it = cache_.erase(it);
         }
         else
+        {
+            if(it->second.currentTtl ==
+                    (int) it->second.originalTtl * CACHE_ENTRY_REISSUE_AT)
+            {
+                query.questions.push_back(DnsMessage::Question(
+                        splitName(it->first), DnsMessage::TYPE_A));
+            }
             ++it;
+        }
     }
 
     if(!query.isEmpty())
