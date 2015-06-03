@@ -12,11 +12,13 @@ using boost::asio::ip::tcp;
 TelnetSession::TelnetSession(TelnetServer& server, tcp::socket socket):
     server_(server), socket_(std::move(socket)), ready_(false), line_(0)
 {
-    // wylacz linemode
+    // wylacz linemode i go-ahead
     auto data = std::shared_ptr<std::vector<char>>(new std::vector<char>{
-            '\xff', '\xfd', '\x22',
-            '\xff', '\xfa', '\x22', '\x01', '\x00', '\xff', '\xf0',
-            '\xff', '\xfb', '\x01',
+            '\xff', '\xfd', '\x22',                 // IAC DO LINEMODE
+            '\xff', '\xfa', '\x22', '\x01', '\x00', // IAC SB LINEMODE MODE 0
+            '\xff', '\xf0',                         // IAC SE
+            '\xff', '\xfb', '\x01',                 // IAC WILL ECHO
+            '\xff', '\xfb', '\x03',             // IAC WILL SUPPRESS-GO-AHEAD
             '\r', '\n'
     });
     async_write(socket_, buffer(*data),
