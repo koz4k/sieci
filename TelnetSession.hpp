@@ -16,7 +16,6 @@ class TelnetSession
   private:
     void read_();
     void onRead_(const boost::system::error_code& error, size_t len);
-    void onWrite_(const boost::system::error_code& error);
     void beep_();
     void error_(const char* action,
                 const boost::system::error_code& error);
@@ -25,7 +24,6 @@ class TelnetSession
     boost::asio::ip::tcp::socket socket_;
     std::array<char, 16> buffer_;
     bool ready_;
-    std::string screen_;
     int line_;
 };
 
