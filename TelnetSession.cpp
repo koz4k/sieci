@@ -65,7 +65,7 @@ void TelnetSession::onRead_(const error_code& error, size_t len)
 
     int limit = std::max(server_.getScreenHeight() - SCREEN_HEIGHT + 1, 0);
 
-    bool update = false, beep = false;
+    bool update = false;
     char c = buffer_[0];
     if(c == 'q' && line_ > 0)
     {
@@ -77,26 +77,11 @@ void TelnetSession::onRead_(const error_code& error, size_t len)
         line_ += 1;
         update = true;
     }
-    else if(isprint(c))
-        beep = true;
 
     if(update)
         updateScreen();
-    else if(beep)
-        beep_();
 
     read_();
-}
-
-void TelnetSession::beep_()
-{
-    auto data = std::make_shared<std::string>("\a");
-    async_write(socket_, buffer(*data),
-            [this, data](const error_code& error, size_t len)
-            {
-                if(error)
-                    error_("write", error);
-            });
 }
 
 void TelnetSession::error_(const char* action, const error_code& error)

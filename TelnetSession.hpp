@@ -16,7 +16,6 @@ class TelnetSession
   private:
     void read_();
     void onRead_(const boost::system::error_code& error, size_t len);
-    void beep_();
     void error_(const char* action,
                 const boost::system::error_code& error);
 
