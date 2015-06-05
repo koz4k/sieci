@@ -93,7 +93,14 @@ void MeasurementCollector::outputMeasurement_(std::ostream& os,
         double measurement)
 {
     if(!isnan(measurement))
-        os << (int) measurement;
+    {
+        std::vector<std::string> suffixes{"us", "ms", "s"};
+        int i = 0;
+        for(; measurement >= 1000 && i < suffixes.size(); ++i)
+            measurement /= 1000;
+        
+        os << (int) round(measurement) << suffixes[i];
+    }
     else
         os << "n/a";
 }
