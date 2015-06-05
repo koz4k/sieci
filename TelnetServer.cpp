@@ -87,6 +87,8 @@ void TelnetServer::updateScreen_()
     if(data.empty())
         ok = false;
 
+    screen_.clear();
+
     if(ok)
     {
         std::sort(data.begin(), data.end());
@@ -103,7 +105,6 @@ void TelnetServer::updateScreen_()
 
         int space = SCREEN_WIDTH - maxAddressLen - maxRenderLen - 1;
 
-        screen_.clear();
         for(int i = 0; i < data.size(); ++i)
         {
             std::stringstream ss;

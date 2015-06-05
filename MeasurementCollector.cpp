@@ -7,7 +7,7 @@
 MeasurementCollector::MeasurementCollector(const std::string& address,
         const std::vector<MeasurementService>& services):
     address_(address), measurements_(services.size()), sums_(services.size()),
-    activeServiceCount_(services.size())
+    activeServiceCount_(0)
 {
     for(const MeasurementService& service : services)
         measurers_.push_back(service.createMeasurer(*this));
