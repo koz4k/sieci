@@ -1,5 +1,6 @@
 #include "DnsMessage.hpp"
 #include <arpa/inet.h>
+#include <algorithm>
 #include <cstring>
 
 struct __attribute__((packed, aligned(1))) PackedHeader
@@ -40,6 +41,17 @@ struct __attribute__((packed, aligned(1))) PackedResourceMiddle
     }
 };
 
+char toLowerC(char c)
+{
+    return c >= 'A' && c <= 'Z' ? c - 'A' + 'z' : c;
+}
+
+std::string toLower(std::string str)
+{
+    std::transform(str.begin(), str.end(), str.begin(), toLowerC);
+    return str;
+}
+
 void serializeName(std::vector<uint8_t>& bytes,
         const std::vector<std::string>& name)
 {
@@ -51,9 +63,10 @@ void serializeName(std::vector<uint8_t>& bytes,
     bytes.resize(bytes.size() + byteCount);
     for(const std::string& part : name)
     {
-        bytes[i] = part.size();
-        memcpy(&bytes[i + 1], part.c_str(), part.size());
-        i += 1 + part.size();
+        std::string lpart = toLower(part);
+        bytes[i] = lpart.size();
+        memcpy(&bytes[i + 1], lpart.c_str(), lpart.size());
+        i += 1 + lpart.size();
     }
     bytes[i] = 0;
 }
@@ -83,7 +96,7 @@ std::vector<std::string> deserializeName(const std::vector<uint8_t>& bytes,
 
         int len = bytes[index];
         index += 1;
-        name.push_back(std::string(&bytes[index], &bytes[index + len]));
+        name.push_back(toLower(std::string(&bytes[index], &bytes[index + len])));
         index += len;
     }
     index += 1;

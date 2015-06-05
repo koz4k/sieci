@@ -18,7 +18,7 @@ int main(int argc, char** argv)
                 MeasurementService("_opoznienia._udp", IcmpMeasurer::create,
                         true),
         });
-        ServiceDiscoverer d("hubbabubba", mm);
+        ServiceDiscoverer d("hUbBaBuBbA", mm);
         TelnetServer t(mm, 2015);
         UdpServer us;
         io.run();
