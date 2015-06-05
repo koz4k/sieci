@@ -261,13 +261,20 @@ void ServiceDiscoverer::discover_()
             boost::posix_time::millisec(discoveryPeriod * 1000));
     discoverTimer_.async_wait(std::bind(&ServiceDiscoverer::discover_, this));
 
+    std::unordered_set<std::string> asked;
+
     DnsMessage message;
     for(const MeasurementService& service : manager_.getServices())
     {
+        if(asked.find(service.getName()) != asked.end())
+            continue;
+
         std::vector<std::string> name = splitService(service.getName());
         name.push_back("local");
         message.questions.push_back(DnsMessage::Question(std::move(name),
                 DnsMessage::TYPE_PTR, discoveryCount_ == 0));
+
+        asked.insert(service.getName());
     }
 
     if(!message.isEmpty())
