@@ -42,6 +42,7 @@ class ServiceDiscoverer
     boost::asio::deadline_timer discoverTimer_;
     boost::asio::ip::udp::socket socket_;
     std::vector<uint8_t> buffer_;
+    boost::asio::ip::address_v4 myIp_;
     boost::asio::ip::udp::endpoint multicastEndpoint_;
     boost::asio::ip::udp::endpoint senderEndpoint_;
     std::unordered_map<std::string, CacheEntry_> cache_;

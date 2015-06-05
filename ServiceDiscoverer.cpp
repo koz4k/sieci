@@ -3,10 +3,12 @@
 #include "io.hpp"
 #include "options.hpp"
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <ifaddrs.h>
 #include <sstream>
 #include <functional>
 #include <algorithm>
 #include <iostream>
+#include <system_error>
 
 using namespace boost::asio;
 using namespace boost::system;
@@ -61,11 +63,39 @@ std::string ipToString(const std::vector<uint8_t>& bytes)
     return ss.str();
 }
 
+ip::address_v4 getMyIp()
+{
+    struct ifaddrs* ifas;
+    if(getifaddrs(&ifas))
+        throw std::system_error(errno, std::system_category());
+
+    struct ifaddrs* begin = ifas;
+
+    while(ifas)
+    {
+        if((ifas->ifa_flags & IFF_UP) & (ifas->ifa_flags && IFF_RUNNING) &&
+                !(ifas->ifa_flags & IFF_LOOPBACK) &&
+                ifas->ifa_addr->sa_family == AF_INET)
+        {
+            sockaddr_in* a = (sockaddr_in*) ifas->ifa_addr;
+            ip::address_v4 address(ntohl(a->sin_addr.s_addr));
+            freeifaddrs(begin);
+            return address;
+        }
+
+        ifas = ifas->ifa_next;
+    }
+
+    freeifaddrs(begin);
+    throw std::runtime_error("No interface is connected to network");
+}
+
 ServiceDiscoverer::ServiceDiscoverer(std::string instance,
         MeasurementManager& manager):
     instance_(std::move(instance)), manager_(manager), updateTimer_(io),
     discoverTimer_(io), socket_(io, udp::endpoint(udp::v4(), 5353)),
     buffer_(DNS_MESSAGE_MAX_LENGTH),
+    myIp_(getMyIp()),
     multicastEndpoint_(ip::address_v4({224, 0, 0, 251}), 5353),
     firstDiscovery_(true)
 {
@@ -95,8 +125,7 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
     {
         bool multicast = senderEndpoint_.port() == 5353;
 
-        ip::address addr = socket_.local_endpoint().address();
-        std::array<uint8_t, 4> arr = addr.to_v4().to_bytes();
+        std::array<uint8_t, 4> arr = myIp_.to_bytes();
         std::vector<uint8_t> ipData(arr.begin(), arr.end());
 
         DnsMessage received(buffer_);
@@ -131,13 +160,15 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
                                 question.name.end());
 
                         response.answers.push_back(DnsMessage::Resource(
-                                question.name, DnsMessage::TYPE_PTR, 11,
+                                question.name, DnsMessage::TYPE_PTR,
+                                discoveryPeriod / CACHE_ENTRY_REISSUE_AT,
                                 dname));
 
                         if(multicast)
                         {
                             response.answers.push_back(DnsMessage::Resource(
-                                    std::move(dname), DnsMessage::TYPE_A, 11,
+                                    std::move(dname), DnsMessage::TYPE_A,
+                                    discoveryPeriod / CACHE_ENTRY_REISSUE_AT,
                                     ipData));
                         }
                     }
@@ -151,7 +182,8 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
                     {
                         response.answers.push_back(DnsMessage::Resource(
                                 std::move(question.name), DnsMessage::TYPE_A,
-                                11, ipData));
+                                discoveryPeriod / CACHE_ENTRY_REISSUE_AT,
+                                ipData));
                     }
                     break;
                 }

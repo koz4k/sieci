@@ -2,7 +2,7 @@ TARGET: opoznienia
 
 CC	= g++
 CFLAGS	= -Wall -std=c++11 -g
-LFLAGS	= -Wall -lboost_system
+LFLAGS	= -Wall -lboost_system -lpthread
 
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c -o $@ $<
