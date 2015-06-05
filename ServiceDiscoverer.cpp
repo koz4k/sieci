@@ -1,6 +1,7 @@
 #include "ServiceDiscoverer.hpp"
 #include "DnsMessage.hpp"
 #include "io.hpp"
+#include "options.hpp"
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <sstream>
 #include <functional>
@@ -216,7 +217,8 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
 
 void ServiceDiscoverer::discover_()
 {
-    discoverTimer_.expires_from_now(boost::posix_time::seconds(10));
+    discoverTimer_.expires_from_now(
+            boost::posix_time::millisec(discoveryPeriod * 1000));
     discoverTimer_.async_wait(std::bind(&ServiceDiscoverer::discover_, this));
 
     DnsMessage message;

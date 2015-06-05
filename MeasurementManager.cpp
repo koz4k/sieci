@@ -1,6 +1,7 @@
 #include "MeasurementManager.hpp"
 #include "Measurer.hpp"
 #include "io.hpp"
+#include "options.hpp"
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 MeasurementManager::MeasurementManager(
@@ -10,7 +11,8 @@ MeasurementManager::MeasurementManager(
     for(int index = 0; index < services_.size(); ++index)
         services_[index].setIndex(index);
 
-    timer_.expires_from_now(boost::posix_time::seconds(1));
+    timer_.expires_from_now(
+            boost::posix_time::millisec(measurementPeriod * 1000));
     timer_.async_wait(std::bind(&MeasurementManager::measure_, this));
 }
 
@@ -49,7 +51,8 @@ MeasurementCollector& MeasurementManager::getCollector_(
 
 void MeasurementManager::measure_()
 {
-    timer_.expires_from_now(boost::posix_time::seconds(1));
+    timer_.expires_from_now(
+            boost::posix_time::millisec(measurementPeriod * 1000));
     timer_.async_wait(std::bind(&MeasurementManager::measure_, this));
     
     for(auto& p : collectors_)

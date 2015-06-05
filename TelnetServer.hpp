@@ -15,7 +15,7 @@ class TelnetSession;
 class TelnetServer
 {
   public:
-    TelnetServer(MeasurementManager& mm, uint16_t port);
+    explicit TelnetServer(MeasurementManager& mm);
     int getScreenHeight() const { return screen_.size(); }
     std::string getScreen(int startLine) const;
     void endSession(TelnetSession& session);

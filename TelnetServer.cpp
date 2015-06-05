@@ -1,6 +1,7 @@
 #include "TelnetServer.hpp"
 #include "TelnetSession.hpp"
 #include "constants.hpp"
+#include "options.hpp"
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <utility>
 #include <sstream>
@@ -13,8 +14,8 @@ using namespace boost::asio;
 using namespace boost::system;
 using boost::asio::ip::tcp;
 
-TelnetServer::TelnetServer(MeasurementManager& mm, uint16_t port):
-    mm_(mm), acceptor_(io, tcp::endpoint(tcp::v4(), port)), socket_(io),
+TelnetServer::TelnetServer(MeasurementManager& mm):
+    mm_(mm), acceptor_(io, tcp::endpoint(tcp::v4(), telnetPort)), socket_(io),
     timer_(io)
 {
     accept_();
@@ -64,7 +65,7 @@ void TelnetServer::onAccept_(const error_code& error)
 
 void TelnetServer::updateScreen_()
 {
-    timer_.expires_from_now(boost::posix_time::seconds(1));
+    timer_.expires_from_now(boost::posix_time::millisec(uiRefreshPeriod * 1000));
     timer_.async_wait(std::bind(&TelnetServer::updateScreen_, this));
 
     bool ok = !sessions_.empty();

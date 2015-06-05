@@ -1,6 +1,7 @@
 #include "UdpServer.hpp"
 #include "io.hpp"
 #include "utils.hpp"
+#include "options.hpp"
 #include <iostream>
 #include <cstring>
 
@@ -9,7 +10,7 @@ using namespace boost::system;
 using boost::asio::ip::udp;
 
 UdpServer::UdpServer():
-    socket_(io, udp::endpoint(udp::v4(), 3382))
+    socket_(io, udp::endpoint(udp::v4(), udpPort))
 {
     receive_();
 }

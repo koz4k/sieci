@@ -1,6 +1,7 @@
 #include "UdpMeasurer.hpp"
 #include "io.hpp"
 #include "utils.hpp"
+#include "options.hpp"
 #include <iostream>
 #include <cstring>
 
@@ -10,7 +11,7 @@ using boost::asio::ip::udp;
 
 UdpMeasurer::UdpMeasurer(MeasurementCollector& collector, int typeIndex):
     Measurer(collector, typeIndex),
-    endpoint_(ip::address::from_string(collector.getAddress()), 3382),
+    endpoint_(ip::address::from_string(collector.getAddress()), udpPort),
     socket_(io, udp::v4())
 {
 }
