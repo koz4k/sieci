@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    //try
+    try
     {
         MeasurementManager mm({
                 MeasurementService("_opoznienia._udp", UdpMeasurer::create),
@@ -35,10 +35,10 @@ int main(int argc, char* argv[])
         UdpServer us;
         io.run();
     }
-    /*catch(std::exception& e)
+    catch(std::exception& e)
     {
         std::cerr << e.what() << std::endl;
-    }*/
+    }
 
     return 0;
 }
