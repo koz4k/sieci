@@ -7,7 +7,10 @@
 #include "IcmpMeasurer.hpp"
 #include "io.hpp"
 #include "options.hpp"
+#include <boost/asio.hpp>
 #include <iostream>
+
+using namespace boost::asio;
 
 int main(int argc, char* argv[])
 {
@@ -27,7 +30,7 @@ int main(int argc, char* argv[])
                 MeasurementService("_opoznienia._udp", IcmpMeasurer::create,
                         true),
         });
-        ServiceDiscoverer d("hUbBaBuBbA", mm);
+        ServiceDiscoverer d(ip::host_name(), mm);
         TelnetServer t(mm);
         UdpServer us;
         io.run();

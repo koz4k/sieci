@@ -38,7 +38,7 @@ std::vector<std::string> splitName(const std::string& str)
         }
         i -= 1;
     }
-    name.push_back(str.substr(0, i));
+    name.push_back(str.substr(0, i + 1));
     std::reverse(name.begin(), name.end());
     return name;
 }
@@ -161,14 +161,14 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
 
                         response.answers.push_back(DnsMessage::Resource(
                                 question.name, DnsMessage::TYPE_PTR,
-                                discoveryPeriod / CACHE_ENTRY_REISSUE_AT,
+                                (discoveryPeriod + 1) / CACHE_ENTRY_REISSUE_AT,
                                 dname));
 
                         if(multicast)
                         {
                             response.answers.push_back(DnsMessage::Resource(
                                     std::move(dname), DnsMessage::TYPE_A,
-                                    discoveryPeriod / CACHE_ENTRY_REISSUE_AT,
+                                    (discoveryPeriod + 1) / CACHE_ENTRY_REISSUE_AT,
                                     ipData));
                         }
                     }
@@ -182,7 +182,7 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
                     {
                         response.answers.push_back(DnsMessage::Resource(
                                 std::move(question.name), DnsMessage::TYPE_A,
-                                discoveryPeriod / CACHE_ENTRY_REISSUE_AT,
+                                (discoveryPeriod + 1) / CACHE_ENTRY_REISSUE_AT,
                                 ipData));
                     }
                     break;
