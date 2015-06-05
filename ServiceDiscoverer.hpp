@@ -29,10 +29,15 @@ class ServiceDiscoverer
     void update_();
     void send_(const DnsMessage& message,
             const boost::asio::ip::udp::endpoint& endpoint);
+    void activateServices_(const std::string& address,
+            const std::string& serviceName);
+    void deactivateServices_(const std::string& address,
+            const std::string& serviceName);
 
     std::string instance_;
     MeasurementManager& manager_;
-    std::unordered_map<std::string, const MeasurementService*> services_;
+    std::unordered_multimap<std::string,
+            const MeasurementService*> services_;
     boost::asio::deadline_timer updateTimer_;
     boost::asio::deadline_timer discoverTimer_;
     boost::asio::ip::udp::socket socket_;

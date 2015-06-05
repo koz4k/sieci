@@ -10,10 +10,7 @@ MeasurementCollector::MeasurementCollector(const std::string& address,
     activeServiceCount_(services.size())
 {
     for(const MeasurementService& service : services)
-    {
         measurers_.push_back(service.createMeasurer(*this));
-        measurers_.back()->setActive(true);
-    }
 }
 
 void MeasurementCollector::activateService(const MeasurementService* service)

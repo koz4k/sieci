@@ -70,8 +70,8 @@ ServiceDiscoverer::ServiceDiscoverer(std::string instance,
 {
     for(const MeasurementService& service : manager.getServices())
     {
-        if(!service.isHidden())
-            services_[service.getName() + ".local."] = &service;
+        services_.insert(std::make_pair(service.getName() + ".local.",
+                &service));
     }
 
     socket_.set_option(ip::multicast::join_group(multicastEndpoint_.address()));
@@ -109,11 +109,21 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
                 DnsMessage& response = question.unicastResponse ?
                         toSendUnicast : toSend;
 
+                bool announce = false;
+                auto range = services_.equal_range("");
                 switch(question.type)
                 {
                   case DnsMessage::TYPE_PTR:
-                    if(services_.find(joinName(question.name)) !=
-                            services_.end())
+                    range = services_.equal_range(joinName(question.name));
+                    for(auto it = range.first; it != range.second; ++it)
+                    {
+                        if(!it->second->isHidden())
+                        {
+                            announce = true;
+                            break;
+                        }
+                    }
+                    if(announce)
                     {
                         std::vector<std::string> dname{instance_};
                         dname.insert(dname.end(), question.name.begin(),
@@ -157,11 +167,7 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
                     CacheEntry_ oldEntry = cache_[name];
                     if(answer.ttl > oldEntry.currentTtl)
                         cache_[name] = CacheEntry_(host, answer.ttl);
-                    std::string serviceName = joinName(answer.name, 1);
-                    auto it = services_.find(serviceName);
-                    if(it != services_.end())
-                        manager_.activateServiceForHost(host,
-                                services_[serviceName]);
+                    activateServices_(host, joinName(answer.name, 1));
                 }
             }
 
@@ -241,8 +247,8 @@ void ServiceDiscoverer::update_()
         it->second.currentTtl -= 1;
         if(it->second.currentTtl == 0)
         {
-            manager_.deactivateServiceForHost(it->second.address,
-                    services_[getServiceFromName(it->first)]);
+            deactivateServices_(it->second.address,
+                    getServiceFromName(it->first));
             it = cache_.erase(it);
         }
         else
@@ -274,4 +280,20 @@ void ServiceDiscoverer::send_(const DnsMessage& message,
                               << error.message() << std::endl;
                 }
             });
+}
+
+void ServiceDiscoverer::activateServices_(const std::string& address,
+        const std::string& serviceName)
+{
+    auto range = services_.equal_range(serviceName);
+    for(auto it = range.first; it != range.second; ++it)
+        manager_.activateServiceForHost(address, it->second);
+}
+
+void ServiceDiscoverer::deactivateServices_(const std::string& address,
+        const std::string& serviceName)
+{
+    auto range = services_.equal_range(serviceName);
+    for(auto it = range.first; it != range.second; ++it)
+        manager_.deactivateServiceForHost(address, it->second);
 }
