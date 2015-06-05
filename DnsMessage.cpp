@@ -43,7 +43,7 @@ struct __attribute__((packed, aligned(1))) PackedResourceMiddle
 
 char toLowerC(char c)
 {
-    return c >= 'A' && c <= 'Z' ? c - 'A' + 'z' : c;
+    return c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c;
 }
 
 std::string toLower(std::string str)

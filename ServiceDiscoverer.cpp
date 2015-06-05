@@ -92,12 +92,12 @@ ip::address_v4 getMyIp()
 
 ServiceDiscoverer::ServiceDiscoverer(std::string instance,
         MeasurementManager& manager):
-    instance_(std::move(instance)), manager_(manager), updateTimer_(io),
-    discoverTimer_(io), socket_(io, udp::endpoint(udp::v4(), 5353)),
-    buffer_(DNS_MESSAGE_MAX_LENGTH),
-    myIp_(getMyIp()),
+    originalInstance_(instance), instance_(instance),
+    instanceId_(2), manager_(manager), updateTimer_(io), discoverTimer_(io),
+    socket_(io, udp::endpoint(udp::v4(), 5353)),
+    buffer_(DNS_MESSAGE_MAX_LENGTH), myIp_(getMyIp()),
     multicastEndpoint_(ip::address_v4({224, 0, 0, 251}), 5353),
-    firstDiscovery_(true)
+    discoveryCount_(0)
 {
     for(const MeasurementService& service : manager.getServices())
     {
@@ -208,6 +208,14 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
             {
                 if(answer.type == DnsMessage::TYPE_PTR)
                 {
+                    if(discoveryCount_ < 2 &&
+                            senderEndpoint_.address().to_v4() != myIp_ &&
+                            !answer.dname.empty() &&
+                            answer.dname[0] == instance_)
+                    {
+                        regenerateInstance_();
+                    }
+
                     if(services_.find(joinName(answer.dname, 1)) !=
                                 services_.end()
                             && cache_.find(joinName(answer.dname)) ==
@@ -259,13 +267,13 @@ void ServiceDiscoverer::discover_()
         std::vector<std::string> name = splitService(service.getName());
         name.push_back("local");
         message.questions.push_back(DnsMessage::Question(std::move(name),
-                DnsMessage::TYPE_PTR, firstDiscovery_));
+                DnsMessage::TYPE_PTR, discoveryCount_ == 0));
     }
 
     if(!message.isEmpty())
         send_(message, multicastEndpoint_);
 
-    firstDiscovery_ = false;
+    discoveryCount_ += 1;
 }
 
 void ServiceDiscoverer::update_()
@@ -330,4 +338,11 @@ void ServiceDiscoverer::deactivateServices_(const std::string& address,
     auto range = services_.equal_range(serviceName);
     for(auto it = range.first; it != range.second; ++it)
         manager_.deactivateServiceForHost(address, it->second);
+}
+
+void ServiceDiscoverer::regenerateInstance_()
+{
+    std::stringstream ss;
+    ss << originalInstance_ << " (" << instanceId_++ << ")";
+    instance_ = ss.str();
 }

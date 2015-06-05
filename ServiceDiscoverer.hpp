@@ -33,8 +33,11 @@ class ServiceDiscoverer
             const std::string& serviceName);
     void deactivateServices_(const std::string& address,
             const std::string& serviceName);
+    void regenerateInstance_();
 
+    std::string originalInstance_;
     std::string instance_;
+    int instanceId_;
     MeasurementManager& manager_;
     std::unordered_multimap<std::string,
             const MeasurementService*> services_;
@@ -46,7 +49,7 @@ class ServiceDiscoverer
     boost::asio::ip::udp::endpoint multicastEndpoint_;
     boost::asio::ip::udp::endpoint senderEndpoint_;
     std::unordered_map<std::string, CacheEntry_> cache_;
-    bool firstDiscovery_;
+    int discoveryCount_;
 };
 
 #endif
