@@ -1,5 +1,6 @@
 #include "TcpMeasurer.hpp"
 #include "io.hpp"
+#include "utils.hpp"
 #include <iostream>
 
 using namespace boost::asio;
@@ -20,11 +21,12 @@ std::unique_ptr<Measurer> TcpMeasurer::create(MeasurementCollector& collector,
 
 void TcpMeasurer::startMeasurement_()
 {
+    uint64_t t = microtime();
     socket_.async_connect(endpoint_,
-            [this](const error_code& err)
+            [this, t](const error_code& err)
             {
                 if(!err)
-                    endMeasurement_();
+                    endMeasurement_(microtime() - t);
                 else
                 {
                     std::cerr << "TcpMeasurer assigned to "
