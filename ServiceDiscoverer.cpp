@@ -234,6 +234,7 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
         {
             send = true;
             toSend.questions = received.questions;
+            toSend.id = received.id;
             endpoint = senderEndpoint_;
         }
         else
