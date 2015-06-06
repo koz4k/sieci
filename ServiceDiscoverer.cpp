@@ -295,7 +295,7 @@ void ServiceDiscoverer::update_()
     while(it != cache_.end())
     {
         it->second.currentTtl -= 1;
-        if(it->second.currentTtl == 0)
+        if(it->second.currentTtl <= 0)
         {
             deactivateServices_(it->second.address,
                     getServiceFromName(it->first));

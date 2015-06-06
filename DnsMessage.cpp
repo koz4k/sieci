@@ -1,6 +1,7 @@
 #include "DnsMessage.hpp"
 #include <arpa/inet.h>
 #include <algorithm>
+#include <unordered_set>
 #include <cstring>
 
 struct __attribute__((packed, aligned(1))) PackedHeader
@@ -71,10 +72,14 @@ void serializeName(std::vector<uint8_t>& bytes,
     bytes[i] = 0;
 }
 
-std::vector<std::string> deserializeName(const std::vector<uint8_t>& bytes,
-        int& index)
+std::vector<std::string> deserializeName_(const std::vector<uint8_t>& bytes,
+        int& index,
+        std::unordered_set<int>& visited)
 {
-    int start = index;
+    if(visited.find(index) != visited.end())
+        throw DnsMessage::FormatError("A cycle discovered in name");
+    visited.insert(index);
+
     std::vector<std::string> name;
     while(bytes[index])
     {
@@ -82,15 +87,10 @@ std::vector<std::string> deserializeName(const std::vector<uint8_t>& bytes,
         if((bytes[index] & 0xc0) == 0xc0)
         {
             int offset = (bytes[index] & ~0xc0) << 8 | bytes[index + 1];
-
-            if(offset >= start)
-                throw DnsMessage::FormatError(
-                        "Name offset references a later position");
-
             index += 2;
-            std::vector<std::string> tail = deserializeName(bytes, offset);
+            std::vector<std::string> tail = deserializeName_(bytes, offset,
+                    visited);
             name.insert(name.end(), tail.begin(), tail.end());
-
             return name;
         }
 
@@ -100,8 +100,14 @@ std::vector<std::string> deserializeName(const std::vector<uint8_t>& bytes,
         index += len;
     }
     index += 1;
-
     return name;
+}
+
+std::vector<std::string> deserializeName(const std::vector<uint8_t>& bytes,
+        int& index)
+{
+    std::unordered_set<int> visited;
+    return deserializeName_(bytes, index, visited);
 }
 
 template<typename T>
