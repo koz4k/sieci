@@ -44,6 +44,9 @@ void MeasurementCollector::measure()
 
 void MeasurementCollector::collect(int index, int measurement)
 {
+    if(index < 0 || index >= measurements_.size())
+        return;
+
     if(measurements_[index].size() == MEASUREMENT_MEAN_OVER)
     {
         sums_[index] -= measurements_[index].front();
