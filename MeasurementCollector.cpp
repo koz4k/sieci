@@ -99,7 +99,8 @@ void MeasurementCollector::outputMeasurement_(std::ostream& os,
         for(; measurement >= 1000 && i < suffixes.size(); ++i)
             measurement /= 1000;
         
-        os << (int) round(measurement) << suffixes[i];
+        os.precision(3);
+        os << measurement << suffixes[i];
     }
     else
         os << "n/a";
