@@ -134,7 +134,7 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
             std::array<uint8_t, 4> arr = myIp_.to_bytes();
             std::vector<uint8_t> ipData(arr.begin(), arr.end());
 
-            DnsMessage received(buffer_);
+            DnsMessage received(buffer_, len);
 
             if(senderEndpoint_.address().is_v6())
                 throw std::runtime_error("querier has IPv6");

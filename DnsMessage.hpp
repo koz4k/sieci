@@ -58,7 +58,7 @@ struct DnsMessage
     };
 
     explicit DnsMessage(bool isResponse = false, bool authoritative = false);
-    explicit DnsMessage(const std::vector<uint8_t>& bytes);
+    DnsMessage(const std::vector<uint8_t>& bytes, int len);
     std::vector<uint8_t> serialize() const;
     bool isEmpty() const;
     

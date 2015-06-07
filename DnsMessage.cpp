@@ -42,6 +42,8 @@ struct __attribute__((packed, aligned(1))) PackedResourceMiddle
     }
 };
 
+int length = 0;
+
 char toLowerC(char c)
 {
     return c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c;
@@ -72,14 +74,22 @@ void serializeName(std::vector<uint8_t>& bytes,
     bytes[i] = 0;
 }
 
+void check(int index)
+{
+    if(index > length)
+        throw DnsMessage::FormatError("malformed message");
+}
+
 std::vector<std::string> deserializeName_(const std::vector<uint8_t>& bytes,
         int& index,
         std::unordered_set<int>& visited)
 {
-    if(visited.find(index) != visited.end())
-        throw DnsMessage::FormatError("A cycle discovered in name");
-    visited.insert(index);
+    check(index + 1);
 
+    if(visited.find(index) != visited.end())
+        throw DnsMessage::FormatError("a cycle discovered in name");
+    visited.insert(index);
+    
     std::vector<std::string> name;
     while(bytes[index])
     {
@@ -100,6 +110,7 @@ std::vector<std::string> deserializeName_(const std::vector<uint8_t>& bytes,
         index += len;
     }
     index += 1;
+    check(index);
     return name;
 }
 
@@ -124,6 +135,7 @@ T deserializePrimitive(const std::vector<uint8_t>& bytes, int& index)
     T primitive;
     memcpy(&primitive, &bytes[index], sizeof(T));
     index += sizeof(T);
+    check(index);
     return primitive;
 }
 
@@ -195,6 +207,7 @@ DnsMessage::Resource deserializeResource(const std::vector<uint8_t>& bytes,
     else
     {
         index += len;
+        check(index);
         return DnsMessage::Resource(std::move(name), type, ntohl(middle.ttl),
                 std::move(data));
     }
@@ -206,9 +219,11 @@ DnsMessage::DnsMessage(bool isResponse, bool authoritative):
 {
 }
 
-DnsMessage::DnsMessage(const std::vector<uint8_t>& bytes):
+DnsMessage::DnsMessage(const std::vector<uint8_t>& bytes, int len):
     id(0), isResponse(false), authoritative(false), responseCode(RCODE_OK)
 {
+    length = len;
+
     int index = 0;
 
     PackedHeader header = deserializePrimitive<PackedHeader>(bytes, index);
