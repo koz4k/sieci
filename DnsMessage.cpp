@@ -200,21 +200,21 @@ DnsMessage::Resource deserializeResource(const std::vector<uint8_t>& bytes,
     }
 }
 
-DnsMessage::DnsMessage(bool isResponse, bool recursionDesired):
-    id(0), isResponse(isResponse), recursionDesired(recursionDesired),
+DnsMessage::DnsMessage(bool isResponse, bool authoritative):
+    id(0), isResponse(isResponse), authoritative(authoritative),
     responseCode(RCODE_OK)
 {
 }
 
 DnsMessage::DnsMessage(const std::vector<uint8_t>& bytes):
-    id(0), isResponse(false), recursionDesired(false), responseCode(RCODE_OK)
+    id(0), isResponse(false), authoritative(false), responseCode(RCODE_OK)
 {
     int index = 0;
 
     PackedHeader header = deserializePrimitive<PackedHeader>(bytes, index);
     id = ntohs(header.id);
     isResponse = header.flags1 & 0x80; // QR
-    recursionDesired = header.flags1 & 0x01; // RD
+    authoritative = header.flags2 & 0x04; // AA
     responseCode = (ResponseCode) (header.flags2 & 0x0f); // RCODE
 
     for(int i = 0; i < ntohs(header.qdcount); ++i)
@@ -237,7 +237,7 @@ std::vector<uint8_t> DnsMessage::serialize() const
     PackedHeader header;
     header.id = htons(id);
     header.flags1 = (isResponse ? 0x80 : 0x00)
-                  | (recursionDesired ? 0x01 : 0x00);
+                  | (authoritative ? 0x04 : 0x00);
     header.flags2 = (uint8_t) responseCode;
     header.qdcount = htons(questions.size());
     header.ancount = htons(answers.size());

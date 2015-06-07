@@ -36,6 +36,11 @@ void MeasurementManager::deactivateServiceForHost(const std::string& address,
         collectors_.erase(address);
 }
 
+void MeasurementManager::deactivateServicesForHost(const std::string& address)
+{
+    collectors_.erase(address);
+}
+
 MeasurementCollector& MeasurementManager::getCollector_(
         const std::string& address)
 {

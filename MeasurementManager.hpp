@@ -18,6 +18,7 @@ class MeasurementManager
             const MeasurementService* service);
     void deactivateServiceForHost(const std::string& address,
             const MeasurementService* service);
+    void deactivateServicesForHost(const std::string& address);
     std::vector<MeasurementCollector::Data> getData() const;
 
   private:

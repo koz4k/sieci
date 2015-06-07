@@ -38,7 +38,7 @@ void MeasurementCollector::deactivateService(const MeasurementService* service)
 void MeasurementCollector::measure()
 {
     for(auto& m : measurers_)
-        if(m->isActive())
+        if(m->isReady())
             m->measure();
 }
 

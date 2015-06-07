@@ -57,14 +57,14 @@ struct DnsMessage
         using std::runtime_error::runtime_error;
     };
 
-    explicit DnsMessage(bool isResponse = false, bool recursionDesired = false);
+    explicit DnsMessage(bool isResponse = false, bool authoritative = false);
     explicit DnsMessage(const std::vector<uint8_t>& bytes);
     std::vector<uint8_t> serialize() const;
     bool isEmpty() const;
     
     int id;
     bool isResponse;
-    bool recursionDesired;
+    bool authoritative;
     ResponseCode responseCode;
 
     std::vector<Question> questions;

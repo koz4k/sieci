@@ -229,6 +229,7 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
         }
 
         bool send = !toSend.isEmpty();
+        bool split = true;
         udp::endpoint endpoint;
         if(!received.isResponse && !multicast)
         {
@@ -236,12 +237,20 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
             toSend.questions = received.questions;
             toSend.id = received.id;
             endpoint = senderEndpoint_;
+            split = false;
         }
         else
+        {
+            if(toSend.isResponse)
+                toSend.authoritative = true;
             endpoint = multicastEndpoint_;
+        }
 
         if(send)
-            send_(toSend, endpoint);
+            send_(toSend, endpoint, split);
+
+        if(toSendUnicast.isResponse)
+            toSendUnicast.authoritative = true;
 
         if(!toSendUnicast.isEmpty())
             send_(toSendUnicast, senderEndpoint_);
@@ -317,7 +326,30 @@ void ServiceDiscoverer::update_()
         send_(query, multicastEndpoint_);
 }
 
-void ServiceDiscoverer::send_(const DnsMessage& message,
+int getLength(const DnsMessage& message)
+{
+    return message.serialize().size();
+}
+
+void split(DnsMessage& toSend, DnsMessage& rest)
+{
+    rest = DnsMessage(toSend.isResponse, toSend.authoritative);
+    while(getLength(toSend) > 512)
+    {
+        if(!toSend.questions.empty())
+        {
+            rest.questions.push_back(std::move(toSend.questions.back()));
+            toSend.questions.pop_back();
+        }
+        else if(!toSend.answers.empty())
+        {
+            rest.answers.push_back(std::move(toSend.answers.back()));
+            toSend.answers.pop_back();
+        }
+    }
+}
+
+void ServiceDiscoverer::sendOne_(const DnsMessage& message,
         const udp::endpoint& endpoint)
 {
     auto data = std::make_shared<std::vector<uint8_t>>(message.serialize());
@@ -330,6 +362,21 @@ void ServiceDiscoverer::send_(const DnsMessage& message,
                               << error.message() << std::endl;
                 }
             });
+}
+
+void ServiceDiscoverer::send_(DnsMessage& message,
+        const udp::endpoint& endpoint, bool spl)
+{
+    if(!spl)
+        sendOne_(message, endpoint);
+
+    DnsMessage rest;
+    do
+    {
+        split(message, rest);
+        sendOne_(message, endpoint);
+    }
+    while(!rest.isEmpty());
 }
 
 void ServiceDiscoverer::activateServices_(const std::string& address,

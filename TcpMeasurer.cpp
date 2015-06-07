@@ -21,6 +21,7 @@ std::unique_ptr<Measurer> TcpMeasurer::create(MeasurementCollector& collector,
 
 void TcpMeasurer::startMeasurement_()
 {
+    ready_ = false;
     uint64_t t = microtime();
     socket_.async_connect(endpoint_,
             [this, t](const error_code& err)
@@ -36,5 +37,6 @@ void TcpMeasurer::startMeasurement_()
                 }
 
                 socket_.close();
+                ready_ = true;
             });
 }

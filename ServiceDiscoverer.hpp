@@ -27,8 +27,11 @@ class ServiceDiscoverer
     void onReceive_(const boost::system::error_code& error, size_t len);
     void discover_();
     void update_();
-    void send_(const DnsMessage& message,
+    void sendOne_(const DnsMessage& message,
             const boost::asio::ip::udp::endpoint& endpoint);
+    void send_(DnsMessage& message,
+            const boost::asio::ip::udp::endpoint& endpoint,
+            bool split = true);
     void activateServices_(const std::string& address,
             const std::string& serviceName);
     void deactivateServices_(const std::string& address,
