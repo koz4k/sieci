@@ -136,6 +136,9 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
 
             DnsMessage received(buffer_);
 
+            if(senderEndpoint_.address().is_v6())
+                throw std::runtime_error("querier has IPv6");
+
             if((myIp_.to_ulong() & netmask_.to_ulong()) !=
                     (senderEndpoint_.address().to_v4().to_ulong()
                             & netmask_.to_ulong()))
@@ -269,7 +272,9 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
         }
         catch(std::exception& e)
         {
-            std::cerr << "ServiceDiscoverer, receive error: " << e.what() << std::endl;
+            std::cerr << "ServiceDiscoverer, receive from "
+                      << senderEndpoint_.address().to_string()
+                      << " error: " << e.what() << std::endl;
         }
     }
     else
