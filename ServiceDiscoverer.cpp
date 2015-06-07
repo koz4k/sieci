@@ -63,7 +63,7 @@ std::string ipToString(const std::vector<uint8_t>& bytes)
     return ss.str();
 }
 
-ip::address_v4 getMyIp()
+void getMyIp(ip::address_v4& address, ip::address_v4& netmask)
 {
     struct ifaddrs* ifas;
     if(getifaddrs(&ifas))
@@ -78,9 +78,11 @@ ip::address_v4 getMyIp()
                 ifas->ifa_addr->sa_family == AF_INET)
         {
             sockaddr_in* a = (sockaddr_in*) ifas->ifa_addr;
-            ip::address_v4 address(ntohl(a->sin_addr.s_addr));
+            address = ip::address_v4(ntohl(a->sin_addr.s_addr));
+            a = (sockaddr_in*) ifas->ifa_netmask;
+            netmask = ip::address_v4(ntohl(a->sin_addr.s_addr));
             freeifaddrs(begin);
-            return address;
+            return;
         }
 
         ifas = ifas->ifa_next;
@@ -95,10 +97,12 @@ ServiceDiscoverer::ServiceDiscoverer(std::string instance,
     originalInstance_(instance), instance_(instance),
     instanceId_(2), manager_(manager), updateTimer_(io), discoverTimer_(io),
     socket_(io, udp::endpoint(udp::v4(), 5353)),
-    buffer_(DNS_MESSAGE_MAX_LENGTH), myIp_(getMyIp()),
+    buffer_(DNS_MESSAGE_MAX_LENGTH),
     multicastEndpoint_(ip::address_v4({224, 0, 0, 251}), 5353),
     discoveryCount_(0)
 {
+    getMyIp(myIp_, netmask_);
+
     for(const MeasurementService& service : manager.getServices())
     {
         services_.insert(std::make_pair(service.getName() + ".local.",
@@ -123,148 +127,150 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
 {
     if(!error)
     {
-        bool multicast = senderEndpoint_.port() == 5353;
-
-        std::array<uint8_t, 4> arr = myIp_.to_bytes();
-        std::vector<uint8_t> ipData(arr.begin(), arr.end());
-
-        DnsMessage received;
         try
         {
-            received = DnsMessage(buffer_);
-        }
-        catch(std::exception& e)
-        {
-            std::cerr << e.what() << std::endl;
-            receive_();
-            return;
-        }
+            bool multicast = senderEndpoint_.port() == 5353;
 
-        DnsMessage toSend, toSendUnicast;
-        if(!received.isResponse)
-        {
-            toSend.isResponse = true;
-            toSendUnicast.isResponse = true;
-            for(DnsMessage::Question& question : received.questions)
+            std::array<uint8_t, 4> arr = myIp_.to_bytes();
+            std::vector<uint8_t> ipData(arr.begin(), arr.end());
+
+            DnsMessage received(buffer_);
+
+            if((myIp_.to_ulong() & netmask_.to_ulong()) !=
+                    (senderEndpoint_.address().to_v4().to_ulong()
+                            & netmask_.to_ulong()))
+                throw std::runtime_error("querier outside of the network");
+
+            DnsMessage toSend, toSendUnicast;
+            if(!received.isResponse)
             {
-                DnsMessage& response = question.unicastResponse ?
-                        toSendUnicast : toSend;
-
-                bool announce = false;
-                auto range = services_.equal_range("");
-                switch(question.type)
+                toSend.isResponse = true;
+                toSendUnicast.isResponse = true;
+                for(DnsMessage::Question& question : received.questions)
                 {
-                  case DnsMessage::TYPE_PTR:
-                    range = services_.equal_range(joinName(question.name));
-                    for(auto it = range.first; it != range.second; ++it)
+                    DnsMessage& response = question.unicastResponse ?
+                            toSendUnicast : toSend;
+
+                    bool announce = false;
+                    auto range = services_.equal_range("");
+                    switch(question.type)
                     {
-                        if(!it->second->isHidden())
+                      case DnsMessage::TYPE_PTR:
+                        range = services_.equal_range(joinName(question.name));
+                        for(auto it = range.first; it != range.second; ++it)
                         {
-                            announce = true;
-                            break;
+                            if(!it->second->isHidden())
+                            {
+                                announce = true;
+                                break;
+                            }
                         }
-                    }
-                    if(announce)
-                    {
-                        std::vector<std::string> dname{instance_};
-                        dname.insert(dname.end(), question.name.begin(),
-                                question.name.end());
+                        if(announce)
+                        {
+                            std::vector<std::string> dname{instance_};
+                            dname.insert(dname.end(), question.name.begin(),
+                                    question.name.end());
 
-                        response.answers.push_back(DnsMessage::Resource(
-                                question.name, DnsMessage::TYPE_PTR,
-                                (discoveryPeriod + 1) / CACHE_ENTRY_REISSUE_AT,
-                                dname));
+                            response.answers.push_back(DnsMessage::Resource(
+                                    question.name, DnsMessage::TYPE_PTR,
+                                    (discoveryPeriod + 1) / CACHE_ENTRY_REISSUE_AT,
+                                    dname));
 
-                        if(multicast)
+                            if(multicast)
+                            {
+                                response.answers.push_back(DnsMessage::Resource(
+                                        std::move(dname), DnsMessage::TYPE_A,
+                                        (discoveryPeriod + 1) / CACHE_ENTRY_REISSUE_AT,
+                                        ipData));
+                            }
+                        }
+                        break;
+
+                      case DnsMessage::TYPE_A:
+                        if(!question.name.empty() &&
+                                question.name[0] == instance_ &&
+                                services_.find(joinName(question.name, 1))
+                                        != services_.end())
                         {
                             response.answers.push_back(DnsMessage::Resource(
-                                    std::move(dname), DnsMessage::TYPE_A,
+                                    std::move(question.name), DnsMessage::TYPE_A,
                                     (discoveryPeriod + 1) / CACHE_ENTRY_REISSUE_AT,
                                     ipData));
                         }
+                        break;
                     }
-                    break;
-
-                  case DnsMessage::TYPE_A:
-                    if(!question.name.empty() &&
-                            question.name[0] == instance_ &&
-                            services_.find(joinName(question.name, 1))
-                                    != services_.end())
-                    {
-                        response.answers.push_back(DnsMessage::Resource(
-                                std::move(question.name), DnsMessage::TYPE_A,
-                                (discoveryPeriod + 1) / CACHE_ENTRY_REISSUE_AT,
-                                ipData));
-                    }
-                    break;
                 }
             }
-        }
-        else
-        {
-            for(DnsMessage::Resource& answer : received.answers)
+            else
             {
-                if(answer.type == DnsMessage::TYPE_A)
+                for(DnsMessage::Resource& answer : received.answers)
                 {
-                    std::string name = joinName(answer.name);
-                    std::string host = ipToString(answer.data);
-                    CacheEntry_ oldEntry = cache_[name];
-                    if(answer.ttl > oldEntry.currentTtl)
-                        cache_[name] = CacheEntry_(host, answer.ttl);
-                    activateServices_(host, joinName(answer.name, 1));
+                    if(answer.type == DnsMessage::TYPE_A)
+                    {
+                        std::string name = joinName(answer.name);
+                        std::string host = ipToString(answer.data);
+                        CacheEntry_ oldEntry = cache_[name];
+                        if(answer.ttl > oldEntry.currentTtl)
+                            cache_[name] = CacheEntry_(host, answer.ttl);
+                        activateServices_(host, joinName(answer.name, 1));
+                    }
+                }
+
+                for(DnsMessage::Resource& answer : received.answers)
+                {
+                    if(answer.type == DnsMessage::TYPE_PTR)
+                    {
+                        if(discoveryCount_ < 2 &&
+                                senderEndpoint_.address().to_v4() != myIp_ &&
+                                !answer.dname.empty() &&
+                                answer.dname[0] == instance_)
+                        {
+                            regenerateInstance_();
+                        }
+
+                        if(services_.find(joinName(answer.dname, 1)) !=
+                                    services_.end()
+                                && cache_.find(joinName(answer.dname)) ==
+                                        cache_.end())
+                        {
+                            toSend.questions.push_back(DnsMessage::Question(
+                                    std::move(answer.dname), DnsMessage::TYPE_A));
+                        }
+                    }
                 }
             }
 
-            for(DnsMessage::Resource& answer : received.answers)
+            bool send = !toSend.isEmpty();
+            bool split = true;
+            udp::endpoint endpoint;
+            if(!received.isResponse && !multicast)
             {
-                if(answer.type == DnsMessage::TYPE_PTR)
-                {
-                    if(discoveryCount_ < 2 &&
-                            senderEndpoint_.address().to_v4() != myIp_ &&
-                            !answer.dname.empty() &&
-                            answer.dname[0] == instance_)
-                    {
-                        regenerateInstance_();
-                    }
-
-                    if(services_.find(joinName(answer.dname, 1)) !=
-                                services_.end()
-                            && cache_.find(joinName(answer.dname)) ==
-                                    cache_.end())
-                    {
-                        toSend.questions.push_back(DnsMessage::Question(
-                                std::move(answer.dname), DnsMessage::TYPE_A));
-                    }
-                }
+                send = true;
+                toSend.questions = received.questions;
+                toSend.id = received.id;
+                endpoint = senderEndpoint_;
+                split = false;
             }
-        }
+            else
+            {
+                if(toSend.isResponse)
+                    toSend.authoritative = true;
+                endpoint = multicastEndpoint_;
+            }
 
-        bool send = !toSend.isEmpty();
-        bool split = true;
-        udp::endpoint endpoint;
-        if(!received.isResponse && !multicast)
+            if(send)
+                send_(toSend, endpoint, split);
+
+            if(toSendUnicast.isResponse)
+                toSendUnicast.authoritative = true;
+
+            if(!toSendUnicast.isEmpty())
+                send_(toSendUnicast, senderEndpoint_);
+        }
+        catch(std::exception& e)
         {
-            send = true;
-            toSend.questions = received.questions;
-            toSend.id = received.id;
-            endpoint = senderEndpoint_;
-            split = false;
+            std::cerr << "ServiceDiscoverer, receive error: " << e.what() << std::endl;
         }
-        else
-        {
-            if(toSend.isResponse)
-                toSend.authoritative = true;
-            endpoint = multicastEndpoint_;
-        }
-
-        if(send)
-            send_(toSend, endpoint, split);
-
-        if(toSendUnicast.isResponse)
-            toSendUnicast.authoritative = true;
-
-        if(!toSendUnicast.isEmpty())
-            send_(toSendUnicast, senderEndpoint_);
     }
     else
     {
