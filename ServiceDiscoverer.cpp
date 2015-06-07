@@ -128,7 +128,18 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
         std::array<uint8_t, 4> arr = myIp_.to_bytes();
         std::vector<uint8_t> ipData(arr.begin(), arr.end());
 
-        DnsMessage received(buffer_);
+        DnsMessage received;
+        try
+        {
+            received = DnsMessage(buffer_);
+        }
+        catch(std::exception& e)
+        {
+            std::cerr << e.what() << std::endl;
+            receive_();
+            return;
+        }
+
         DnsMessage toSend, toSendUnicast;
         if(!received.isResponse)
         {

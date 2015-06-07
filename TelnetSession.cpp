@@ -86,8 +86,17 @@ void TelnetSession::onRead_(const error_code& error, size_t len)
 
 void TelnetSession::error_(const char* action, const error_code& error)
 {
-    std::cerr << "TelnetSession assigned to "
-              << socket_.remote_endpoint().address().to_string() << ", "
-              << action << " error: " << error.message() << std::endl;
+    try
+    {
+        std::cerr << "TelnetSession assigned to "
+                  << socket_.remote_endpoint().address().to_string() << ", "
+                  << action << " error: " << error.message() << std::endl;
+    }
+    catch(system_error& e)
+    {
+        std::cerr << "TelnetSession, " << action << " error: "
+                  << error.message() << std::endl;
+    }
+
     server_.endSession(*this);
 }
