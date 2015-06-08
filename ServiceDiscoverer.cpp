@@ -272,7 +272,7 @@ void ServiceDiscoverer::onReceive_(const boost::system::error_code& error,
         }
         catch(std::exception& e)
         {
-            std::cerr << "ServiceDiscoverer, receive from "
+            std::cerr << "ServiceDiscoverer, decoding message from "
                       << senderEndpoint_.address().to_string()
                       << " error: " << e.what() << std::endl;
         }
@@ -374,6 +374,16 @@ void split(DnsMessage& toSend, DnsMessage& rest)
 void ServiceDiscoverer::sendOne_(const DnsMessage& message,
         const udp::endpoint& endpoint)
 {
+    try
+    {
+        std::vector<uint8_t> data = message.serialize();
+        DnsMessage msg(data, data.size());
+    }
+    catch(std::exception& e)
+    {
+        return;
+    }
+
     auto data = std::make_shared<std::vector<uint8_t>>(message.serialize());
     socket_.async_send_to(buffer(*data), endpoint,
             [data](const error_code& error, size_t len)
